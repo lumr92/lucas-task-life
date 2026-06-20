@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lucas_OS — SRE Dashboard</title>
+  <meta name="description" content="Sistema pessoal de produtividade e gamificação para SRE Engineer."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <!-- ── TOP NAV ──────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">LUCAS_OS</span>
+      <span class="topbar-version mono">v2.0</span>
+    </div>
+    <nav class="topbar-nav" id="main-nav">
+      <button class="nav-btn active" data-tab="home">⌂ HOME</button>
+      <button class="nav-btn" data-tab="estudos">◈ ESTUDOS</button>
+      <button class="nav-btn" data-tab="projetos">◉ PROJETOS</button>
+      <button class="nav-btn" data-tab="rotina">◈ ROTINA</button>
+      <button class="nav-btn" data-tab="agenda">⊞ AGENDA</button>
+      <button class="nav-btn" data-tab="stats">↗ STATS</button>
+      <button class="nav-btn" data-tab="financeiro">$ FINANCEIRO</button>
+    </nav>
+    <div class="topbar-right">
+      <span class="status-dot online"></span>
+      <span class="mono text-muted" style="font-size:0.75rem">SYSTEM ONLINE</span>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────── -->
+  <main class="content">
+
+    <!-- HOME ─────────────────────────────────────── -->
+    <section id="tab-home" class="tab active">
+      <div class="home-grid">
+
+        <!-- Identity -->
+        <div class="identity-card card">
+          <div class="identity-tag mono">// SRE Engineer</div>
+          <h1 class="identity-name" id="char-name">LUCAS</h1>
+          <div class="identity-rank" id="char-rank">SRE_Rookie</div>
+          <div class="identity-level mono" id="char-level">LVL 1</div>
+          <div class="xp-bar-wrap">
+            <div class="xp-bar">
+              <div class="xp-fill" id="xp-fill"></div>
+            </div>
+            <div class="xp-label mono" id="xp-label">0 / 100 XP</div>
+          </div>
+          <div class="streak-badge" id="streak-badge">
+            <span class="streak-fire">🔥</span>
+            <span class="streak-count mono" id="streak-count">0</span>
+            <span class="streak-text">DAY STREAK</span>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats card">
+          <div class="card-header mono">&gt; QUICK_STATS</div>
+          <div class="stats-grid" id="quick-stats-grid">
+            <div class="stat-item">
+              <div class="stat-value mono" id="qs-notes">—</div>
+              <div class="stat-label">Diários</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value mono" id="qs-active">—</div>
+              <div class="stat-label">Quests Ativas</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value mono" id="qs-done">—</div>
+              <div class="stat-label">Concluídas</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value mono" id="qs-habits">—</div>
+              <div class="stat-label">Hábitos Hoje</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manifesto -->
+        <div class="manifesto-card card">
+          <div class="card-header mono">&gt; MANIFESTO.SRE</div>
+          <ul class="manifesto-list" id="manifesto-list">
+            <li class="manifesto-line">Carregando...</li>
+          </ul>
+        </div>
+
+        <!-- System Status -->
+        <div class="system-status card">
+          <div class="card-header mono">&gt; SYSTEM_STATUS</div>
+          <div class="sys-items" id="sys-status">
+            <div class="sys-item">
+              <span class="status-dot online"></span>
+              <span class="mono">Obsidian Vault</span>
+              <span class="mono text-blue" style="margin-left:auto">/lucas-notes</span>
+            </div>
+            <div class="sys-item" id="sys-google">
+              <span class="status-dot offline" id="dot-google"></span>
+              <span class="mono">Google Calendar</span>
+              <span class="mono text-muted" id="label-google" style="margin-left:auto">não config.</span>
+            </div>
+            <div class="sys-item" id="sys-outlook">
+              <span class="status-dot offline" id="dot-outlook"></span>
+              <span class="mono">Outlook Calendar</span>
+              <span class="mono text-muted" id="label-outlook" style="margin-left:auto">não config.</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /home-grid -->
+    </section>
+
+    <!-- ESTUDOS ───────────────────────────────────── -->
+    <section id="tab-estudos" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; STUDY_PLAN // 30-60-90 DAYS</h2>
+        <span class="overall-pct mono" id="sp-overall">—% OVERALL</span>
+      </div>
+      <div class="phases-grid" id="phases-grid">
+        <!-- Filled by JS -->
+      </div>
+      <div class="tech-stack-section">
+        <div class="card-header mono">&gt; TECH_STACK</div>
+        <div class="tech-grid">
+          <div class="tech-card done"><span class="tech-icon">🐳</span><span>Docker</span></div>
+          <div class="tech-card done"><span class="tech-icon">☸️</span><span>Kubernetes</span></div>
+          <div class="tech-card done"><span class="tech-icon">🏗️</span><span>Terraform</span></div>
+          <div class="tech-card done"><span class="tech-icon">🤖</span><span>Ansible</span></div>
+          <div class="tech-card done"><span class="tech-icon">🐍</span><span>Python</span></div>
+          <div class="tech-card active"><span class="tech-icon">📊</span><span>LGTM Stack</span></div>
+          <div class="tech-card active"><span class="tech-icon">🔄</span><span>ArgoCD</span></div>
+          <div class="tech-card pending"><span class="tech-icon">🔐</span><span>Vault</span></div>
+          <div class="tech-card pending"><span class="tech-icon">☁️</span><span>AWS</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJETOS ──────────────────────────────────── -->
+    <section id="tab-projetos" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; PROJECTS_BOARD</h2>
+      </div>
+      <div class="projects-board" id="projects-board">
+        <!-- Filled by JS -->
+      </div>
+      <div class="quests-section">
+        <div class="card-header mono" style="margin-top:2rem">&gt; QUEST_BOARD // ACTIVE</div>
+        <div class="quests-list" id="quests-active-list">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ROTINA ────────────────────────────────────── -->
+    <section id="tab-rotina" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; HABIT_LOG</h2>
+        <div class="streak-badge small" id="rotina-streak">
+          <span class="streak-fire">🔥</span>
+          <span class="streak-count mono" id="rotina-streak-count">0</span>
+          <span class="streak-text">STREAK</span>
+        </div>
+      </div>
+      <div class="habits-table-wrap">
+        <table class="habits-table" id="habits-table">
+          <!-- Filled by JS -->
+        </table>
+      </div>
+    </section>
+
+    <!-- AGENDA ────────────────────────────────────── -->
+    <section id="tab-agenda" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; AGENDA // NEXT EVENTS</h2>
+      </div>
+      <div class="events-timeline" id="events-timeline">
+        <!-- Filled by JS -->
+      </div>
+    </section>
+
+    <!-- STATS ─────────────────────────────────────── -->
+    <section id="tab-stats" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; STATS // CONSISTENCY</h2>
+      </div>
+      <div class="charts-grid">
+        <div class="chart-card card">
+          <div class="card-header mono">&gt; XP_CURVE</div>
+          <canvas id="xp-chart" width="600" height="200"></canvas>
+        </div>
+        <div class="chart-card card">
+          <div class="card-header mono">&gt; HABIT_CONSISTENCY</div>
+          <canvas id="habit-chart" width="600" height="200"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINANCEIRO ────────────────────────────────── -->
+    <section id="tab-financeiro" class="tab">
+      <div class="section-title-bar">
+        <h2 class="mono">&gt; FINANCIAL_GOALS</h2>
+      </div>
+      <div class="financial-grid" id="financial-grid">
+        <!-- Filled by JS -->
+      </div>
+      <div class="career-section">
+        <div class="card-header mono" style="margin-top:2rem">&gt; CAREER_GOALS</div>
+        <div class="career-list" id="career-list">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── STATUS BAR ───────────────────────────────── -->
+  <footer class="statusbar">
+    <span class="mono">LUCAS_OS</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-blue">BUILD_YOURSELF_DAILY</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-muted" id="sb-time">--:--</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-muted">PORT 9999</span>
+    <span class="statusbar-sep" style="margin-left:auto">|</span>
+    <span class="mono text-muted" id="sb-date">----</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Secrets / config local
+# config.json contém URLs privadas de calendário — NÃO versionar se tiver dados sensíveis
+# Descomente a linha abaixo se quiser ignorar o config.json:
+# config.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
