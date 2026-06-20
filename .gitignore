@@ -10,9 +10,8 @@ dist/
 build/
 
 # Secrets / config local
-# config.json contém URLs privadas de calendário — NÃO versionar se tiver dados sensíveis
-# Descomente a linha abaixo se quiser ignorar o config.json:
-# config.json
+# config.json contém paths locais e URLs privadas de calendário
+config.json
 
 # OS
 .DS_Store

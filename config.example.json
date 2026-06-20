@@ -1,0 +1,19 @@
+{
+  "obsidian_vault_path": "/caminho/para/seu/vault",
+  "google_calendar_ical_url": "",
+  "outlook_calendar_ical_url": "",
+  "habits": ["agua", "exercicio", "estudos", "meditacao"],
+  "study_plan_path": "03_Recursos/Estudos/# DevOps Study Plan — 30 - 60 - 90 Days.md",
+  "manifesto_path": "manifesto.md",
+  "character_name": "SeuNome",
+  "financial_goals": [
+    {"label": "Reserva de Emergência", "current": 0, "target": 30000, "unit": "R$"},
+    {"label": "Certificação CKA", "current": 0, "target": 100, "unit": "%"},
+    {"label": "Meta Salarial", "current": 0, "target": 15000, "unit": "R$"}
+  ],
+  "career_goals": [
+    {"label": "Concluir Fase 3 do Study Plan", "done": false},
+    {"label": "Obter certificação CKA", "done": false},
+    {"label": "Contribuir para projeto open-source", "done": false}
+  ]
+}

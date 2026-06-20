@@ -26,10 +26,14 @@ Inspirado no **RETRO_OS** do Tuca, adaptado para o contexto de um SRE com foco e
 ## 🚀 Como rodar
 
 ```bash
-git clone https://github.com/lumr92/lucas-os.git
-cd lucas-os
+git clone https://github.com/lumr92/lucas-task-life.git
+cd lucas-task-life
 
-# Primeira vez — cria o venv e instala dependências automaticamente
+# 1. Copie o template de configuração e edite com seus dados
+cp config.example.json config.json
+# Edite config.json: defina o path do vault, URLs do calendário, etc.
+
+# 2. Inicie o servidor (cria o venv automaticamente na primeira vez)
 ./start.sh
 ```
 
