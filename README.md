@@ -1,105 +1,91 @@
-# Lucas_OS — SRE Dashboard
+# Lucas_OS — SRE Dashboard (Microservices)
 
-Dashboard pessoal gamificado para SRE Engineer, integrado ao Obsidian vault.
+Dashboard pessoal gamificado para SRE Engineer, integrado ao Obsidian vault, iCal Calendars e metas de carreira, rodando em uma arquitetura moderna de microserviços dockerizados.
 
 Inspirado no **RETRO_OS** do Tuca, adaptado para o contexto de um SRE com foco em produtividade, hábitos, estudo e carreira.
 
-## ✨ Features
+---
 
-| Aba | O que faz |
-|---|---|
-| **HOME** | Identidade, XP/Level, Streak, Manifesto, Status dos sistemas |
-| **ESTUDOS** | Progresso real do Study Plan 30-60-90 days (lê o Obsidian) |
-| **PROJETOS** | Board de projetos + Quest Board com toggle done/undone |
-| **ROTINA** | Grade semanal de hábitos (lê YAML frontmatter das notas diárias) |
-| **AGENDA** | Timeline de eventos Google Calendar + Outlook (via iCal) |
-| **STATS** | Gráficos de XP e consistência de hábitos (Canvas API nativo) |
-| **FINANCEIRO** | Metas financeiras e goals de carreira SRE |
+## 🎨 Desenho da Arquitetura
 
-## 🛠️ Stack
+O sistema é decomposto em **4 microserviços** isolados rodando via Docker Compose:
 
-- **Backend**: Python + FastAPI + Uvicorn
-- **Frontend**: HTML + CSS + JavaScript puros (sem Node/npm)
-- **Fontes**: Space Grotesk + JetBrains Mono (Google Fonts)
-- **Dados**: Leitura direta do vault Obsidian (`.md` files) + feeds iCal
+- **`gateway` (Nginx)**: Escuta na porta `9999`. Serve a Single Page Application (HTML/CSS/JS) e atua como API Gateway, roteando requisições `/api/*` para os microserviços adequados.
+- **`vault-service` (FastAPI - :9001)**: Responsável por processar arquivos Markdown no Obsidian Vault (tarefas, hábitos, notas diárias, manifesto, study plan).
+- **`calendar-service` (FastAPI - :9002)**: Realiza integração, parse e cache dos calendários externos (Google Calendar e Outlook).
+- **`gamification-service` (FastAPI - :9003)**: Gerencia o sistema de XP, levels, ranks, conquistas, metas financeiras e configurações gerais (`config.json`).
 
-## 🚀 Como rodar
+---
+
+## ✨ Features por Aba
+
+| Aba | O que faz | Serviço Responsável |
+|---|---|---|
+| **HOME** | Identidade, XP/Level, Streak, Manifesto, Status dos sistemas | `gamification-service` + `vault-service` |
+| **ESTUDOS** | Progresso real do Study Plan 30-60-90 days | `vault-service` |
+| **PROJETOS** | Board de projetos + Quest Board com toggle done/undone | `vault-service` |
+| **ROTINA** | Grade semanal de hábitos via notas diárias Obsidian | `vault-service` |
+| **AGENDA** | Timeline de eventos Google Calendar + Outlook (iCal) | `calendar-service` |
+| **STATS** | Gráficos de XP e consistência de hábitos | `gamification-service` + `vault-service` |
+| **FINANCEIRO**| Metas financeiras e de carreira SRE | `gamification-service` |
+
+---
+
+## 🛠️ Stack Tecnológica
+
+- **Orquestração**: Docker Compose
+- **Proxy/Gateway**: Nginx
+- **Backend Services**: Python 3.10 + FastAPI + Uvicorn
+- **Frontend SPA**: HTML + CSS + JavaScript puros (sem dependências como Node/npm)
+- **Design System**: Paleta azul elétrico, scan lines CRT, fontes Space Grotesk + JetBrains Mono.
+
+---
+
+## 🚀 Como Executar
+
+Certifique-se de possuir o **Docker** e **Docker Compose** instalados em sua máquina.
 
 ```bash
 git clone https://github.com/lumr92/lucas-task-life.git
 cd lucas-task-life
 
-# 1. Copie o template de configuração e edite com seus dados
+# 1. Copie o template de configuração e crie a config local
 cp config.example.json config.json
-# Edite config.json: defina o path do vault, URLs do calendário, etc.
 
-# 2. Inicie o servidor (cria o venv automaticamente na primeira vez)
+# 2. Crie o arquivo .env com o caminho do seu Obsidian Vault no Host
+echo "OBSIDIAN_VAULT_PATH=/home/elvenworks24/lucas-notes" > .env
+
+# 3. Inicialize os microserviços (irá buildar as imagens na primeira execução)
 ./start.sh
 ```
 
-Acesse: **http://127.0.0.1:9999**
+Acesse a aplicação no navegador em: **http://127.0.0.1:9999**
 
-## ⚙️ Configuração
+Para parar a aplicação, você pode pressionar `Ctrl+C` no terminal que acompanha os logs ou rodar `docker compose down`.
 
-Edite o `config.json` na raiz do projeto:
-
-```json
-{
-  "obsidian_vault_path": "/caminho/para/seu/vault",
-  "google_calendar_ical_url": "https://calendar.google.com/...",
-  "outlook_calendar_ical_url": "https://outlook.office365.com/...",
-  "habits": ["agua", "exercicio", "estudos", "meditacao"],
-  "study_plan_path": "caminho/relativo/ao/study-plan.md",
-  "manifesto_path": "manifesto.md",
-  "financial_goals": [
-    {"label": "Reserva de Emergência", "current": 0, "target": 30000, "unit": "R$"}
-  ],
-  "career_goals": [
-    {"label": "Obter certificação CKA", "done": false}
-  ]
-}
-```
-
-### Hábitos no Obsidian
-
-Nas notas diárias (`00_Diario/YYYY-MM-DD.md`), adicione frontmatter YAML:
-
-```yaml
 ---
-agua: true
-exercicio: false
-estudos: true
-meditacao: true
----
-```
 
-## 📁 Estrutura
+## 📁 Estrutura de Diretórios
 
 ```
-lumina-quest/
-├── main.py           # Backend FastAPI (APIs + parsers)
-├── config.json       # Configuração central
-├── requirements.txt  # Dependências Python
-├── start.sh          # Script de inicialização
+lucas-task-life/
+├── docker-compose.yml     # Orquestrador dos microserviços
+├── .env                  # Variáveis de ambiente locais (ignorado no Git)
+├── config.json           # Configuração central (ignorado no Git)
+├── config.example.json   # Template de configuração
+├── start.sh              # Script de inicialização automática SRE
+│
+├── gateway/
+│   └── nginx.conf        # Configuração de rotas e proxy reverso do Nginx
+│
+├── services/
+│   ├── vault-service/    # Parser do Obsidian vault
+│   ├── calendar-service/ # Parser de iCal Google/Outlook
+│   └── gamification-service/ # Gerenciador de XP, níveis e config
+│
 ├── templates/
-│   └── index.html    # SPA com 7 abas
+│   └── index.html        # SPA frontend (HTML)
 └── static/
-    ├── style.css     # Design system (paleta azul, scan lines)
-    └── app.js        # Lógica frontend + Canvas charts
+    ├── style.css         # Design system e estilizações
+    └── app.js            # Lógica cliente e gráficos Canvas
 ```
-
-## 🔌 Endpoints da API
-
-| Endpoint | Método | Descrição |
-|---|---|---|
-| `/api/status` | GET | XP, level, rank, streak |
-| `/api/habits` | GET | Grade semanal de hábitos |
-| `/api/quests` | GET | Tarefas ativas e concluídas |
-| `/api/quests/toggle` | POST | Marca/desmarca tarefa no vault |
-| `/api/projects` | GET | Projetos de `01_Projetos/` |
-| `/api/study-plan` | GET | Progresso do study plan |
-| `/api/manifesto` | GET | Frases da nota manifesto |
-| `/api/calendar` | GET | Eventos dos próximos 30 dias |
-| `/api/stats` | GET | Série temporal XP e hábitos |
-| `/api/financial` | GET/POST | Metas financeiras e carreira |
-| `/api/settings` | GET/POST | Lê e salva config.json |
