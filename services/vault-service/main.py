@@ -81,8 +81,8 @@ class VaultParser:
 
         # Build last 4 weeks grid
         weeks = []
-        # Start from the Monday of 4 weeks ago
-        start = today - timedelta(days=today.weekday() + 28)
+        # Start from the Monday of 3 weeks ago (to include the current week)
+        start = today - timedelta(days=today.weekday() + 21)
         for week_num in range(4):
             week_days = []
             for day_offset in range(7):
