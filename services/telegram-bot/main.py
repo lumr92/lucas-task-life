@@ -290,12 +290,11 @@ def trigger_reminder(time_slot: str):
     elif time_slot == "15:00":
         send_message("🕒 <b>Checkpoint das 15h:</b>\nQue tal um café e 5 minutos de alongamento? Dê uma olhada nas suas quests pendentes hoje com o comando /quests")
     elif time_slot == "18:00":
-        send_message("🕕 <b>Checkpoint das 18h:</b>\nExpediente finalizando! Hora de revisar o que foi entregue hoje e atualizar seus stats.")
+        # Dispara automaticamente o fluxo de tarefas domésticas
+        send_step_message(1)
     elif time_slot == "21:00":
-        habits = get_today_habits()
-        markup = get_habits_markup(habits) if habits else None
-        text = "🎮 <b>Fechamento Noturno (21h):</b>\nVamos registrar a consistência de hábitos hoje e salvar o progresso?"
-        send_message(text, markup)
+        # Dispara automaticamente o painel de hábitos interativos do dia
+        handle_habits()
 
 def scheduler_loop():
     last_triggered = {}
