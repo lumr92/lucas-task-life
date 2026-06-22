@@ -127,6 +127,66 @@ def get_habits_markup(habits_status: dict) -> dict:
     keyboard.append([{"text": "🔄 Atualizar Status", "callback_data": "refresh_habits"}])
     return {"inline_keyboard": keyboard}
 
+# ─── Guided Flow Helpers ──────────────────────────────────────────────────────
+
+def toggle_quest_text(text: str, value: bool):
+    try:
+        r = requests.post(f"{VAULT_SVC_URL}/api/quests/toggle-text", json={"text": text, "value": value}, timeout=5)
+        if r.status_code == 200:
+            print(f"[Telegram Bot] Successfully toggled quest: {text} to {value}")
+    except Exception as e:
+        print(f"[Telegram Bot] Error toggling quest text: {e}")
+
+def send_step_message(step: int, message_id: int = None):
+    if step == 1:
+        text = "🐱 <b>[Passo 1/4] Rotina Doméstica</b>\nVocê limpou a caixa de areia dos gatos hoje?"
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Sim, limpei", "callback_data": "flow:1:yes"},
+                    {"text": "⏭️ Pular", "callback_data": "flow:1:skip"}
+                ]
+            ]
+        }
+    elif step == 2:
+        text = "💧 <b>[Passo 2/4] Rotina Doméstica</b>\nVocê trocou a água das meninas?"
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Sim, troquei", "callback_data": "flow:2:yes"},
+                    {"text": "⏭️ Pular", "callback_data": "flow:2:skip"}
+                ]
+            ]
+        }
+    elif step == 3:
+        text = "👕 <b>[Passo 3/4] Rotina Doméstica</b>\nTem roupa para guardar hoje?"
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "🟢 Sim", "callback_data": "flow:3:yes"},
+                    {"text": "🔴 Não", "callback_data": "flow:3:no"}
+                ]
+            ]
+        }
+    elif step == 4:
+        text = "👕 <b>[Passo 4/4] Rotina Doméstica</b>\nVocê já guardou as roupas?"
+        markup = {
+            "inline_keyboard": [
+                [
+                    {"text": "✅ Sim, guardei", "callback_data": "flow:4:yes"},
+                    {"text": "❌ Ainda não", "callback_data": "flow:4:no"}
+                ]
+            ]
+        }
+    else:
+        text = "🏁 <b>Rotina Diária Concluída!</b>\nTodas as tarefas respondidas foram devidamente atualizadas no seu Obsidian. Bom trabalho, Lucas! ☸️"
+        markup = None
+        
+    if message_id:
+        edit_message(message_id, text, markup)
+    else:
+        send_message(text, markup)
+
 # ─── Bot Actions ──────────────────────────────────────────────────────────────
 
 def handle_start():
@@ -135,7 +195,8 @@ def handle_start():
         "Comandos disponíveis:\n"
         "⚔️ /quests - Lista suas tarefas ativas do Obsidian.\n"
         "👤 /status - Ficha de personagem SRE, XP e streak.\n"
-        "💧 /habitos - Painel interativo para registrar hábitos."
+        "💧 /habitos - Painel interativo para registrar hábitos.\n"
+        "🧹 /rotina - Inicia o checklist de tarefas domésticas."
     )
     send_message(welcome_text)
 
@@ -186,6 +247,32 @@ def handle_callback_query(callback_query: dict):
         habits = get_today_habits()
         if habits:
             edit_message(message_id, "💧 <b>Painel de Hábitos de Hoje (Atualizado)</b>\nSelecione os botões abaixo para marcar/desmarcar:", get_habits_markup(habits))
+            
+    elif data.startswith("flow:"):
+        parts = data.split(":")
+        step = int(parts[1])
+        action = parts[2]
+        
+        if step == 1:
+            if action == "yes":
+                toggle_quest_text("Limpar caixas de areia dos gatos", True)
+            send_step_message(2, message_id)
+        elif step == 2:
+            if action == "yes":
+                toggle_quest_text("Trocar água das meninas", True)
+            send_step_message(3, message_id)
+        elif step == 3:
+            if action == "yes":
+                send_step_message(4, message_id)
+            else:
+                toggle_quest_text("Guardar roupas", False)
+                send_step_message(5, message_id)
+        elif step == 4:
+            if action == "yes":
+                toggle_quest_text("Guardar roupas", True)
+            else:
+                toggle_quest_text("Guardar roupas", False)
+            send_step_message(5, message_id)
 
 # ─── Scheduler Loop ───────────────────────────────────────────────────────────
 
@@ -273,6 +360,8 @@ def main():
                             handle_status()
                         elif text == "/habitos":
                             handle_habits()
+                        elif text == "/rotina":
+                            send_step_message(1)
                             
                     # Check callback queries (buttons clicked)
                     elif "callback_query" in update:

@@ -388,9 +388,87 @@ def toggle_habit(payload: Dict[str, Any] = Body(...)):
         with open(note_path, "w", encoding="utf-8") as f:
             f.write(frontmatter.dumps(post))
             
-        return {"status": "success", "habit": habit, "new_state": new_val, "day": day_str}
+        return {"status": "success", "habit": habit, "new_state": new_state, "day": day_str}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update habit: {e}")
+
+@app.post("/api/quests/toggle-text")
+def toggle_quest_by_text(payload: Dict[str, Any] = Body(...)):
+    text_to_find = payload.get("text")
+    day_str = payload.get("day")
+    explicit_val = payload.get("value")
+    
+    if not text_to_find:
+        raise HTTPException(status_code=400, detail="Missing text to toggle")
+        
+    if not day_str:
+        day_str = date.today().strftime("%Y-%m-%d")
+        
+    daily_dir = os.path.join(VAULT_PATH, "00_Diario")
+    os.makedirs(daily_dir, exist_ok=True)
+    note_path = os.path.join(daily_dir, f"{day_str}.md")
+    
+    # If daily note doesn't exist, create it from template
+    if not os.path.exists(note_path):
+        template_path = os.path.join(VAULT_PATH, "99_Modelos/template-diario.md")
+        template_content = ""
+        if os.path.exists(template_path):
+            try:
+                with open(template_path, "r", encoding="utf-8") as tf:
+                    template_content = tf.read()
+                # Replacements
+                template_content = template_content.replace('<% tp.date.now("YYYY-MM-DD") %>', day_str)
+                template_content = template_content.replace('{{date:YYYY-MM-DD}}', day_str)
+                template_content = re.sub(r"<%[\s\S]*?%>", "", template_content)
+            except Exception as e:
+                print(f"Error reading template: {e}")
+        
+        try:
+            with open(note_path, "w", encoding="utf-8") as nf:
+                nf.write(template_content)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create daily note: {e}")
+            
+    try:
+        with open(note_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            
+        found = False
+        new_state = False
+        for idx, line in enumerate(lines):
+            if ("- [ ]" in line or "- [x]" in line) and text_to_find.lower() in line.lower():
+                is_done = "- [x]" in line
+                new_state = explicit_val if explicit_val is not None else (not is_done)
+                new_box = "- [x]" if new_state else "- [ ]"
+                lines[idx] = re.sub(r"- \[[ x]\]", new_box, line, count=1)
+                found = True
+                break
+                
+        if not found:
+            # If the task is not found in the file, append it under Rotina Doméstica or at the bottom
+            # Let's try to append it under "## 🧺 Rotina Doméstica" if that section exists
+            section_idx = -1
+            for idx, line in enumerate(lines):
+                if "## 🧺 Rotina Doméstica" in line:
+                    section_idx = idx
+                    break
+            
+            new_box = "- [x]" if explicit_val is True or explicit_val is None else "- [ ]"
+            new_line = f"{new_box} {text_to_find}\n"
+            
+            if section_idx != -1:
+                lines.insert(section_idx + 1, new_line)
+                new_state = (explicit_val is True or explicit_val is None)
+            else:
+                lines.append(f"\n{new_line}")
+                new_state = (explicit_val is True or explicit_val is None)
+            
+        with open(note_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+            
+        return {"status": "success", "text": text_to_find, "new_state": new_state}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to toggle quest text: {e}")
 
 # ─── Internal API ─────────────────────────────────────────────────────────────
 
