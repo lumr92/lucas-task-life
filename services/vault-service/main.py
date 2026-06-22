@@ -470,6 +470,56 @@ def toggle_quest_by_text(payload: Dict[str, Any] = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to toggle quest text: {e}")
 
+@app.get("/api/daily-tasks")
+def get_daily_tasks(day_str: str = None):
+    if not day_str:
+        day_str = date.today().strftime("%Y-%m-%d")
+        
+    daily_dir = os.path.join(VAULT_PATH, "00_Diario")
+    note_path = os.path.join(daily_dir, f"{day_str}.md")
+    
+    tasks_def = {
+        "work": [
+            "Monitoramento & Alertas (LGTM Stack, Datadog/Grafana)",
+            "Verificar Quests pendentes no Lucas_OS",
+            "Daily Sync & Status Report"
+        ],
+        "domestic": [
+            "Limpar caixas de areia dos gatos",
+            "Trocar água das meninas",
+            "Guardar roupas"
+        ],
+        "studies": [
+            "Avançar no DevOps Study Plan",
+            "Fazer Labs/Prática de Código",
+            "Revisar e Documentar Aprendizados"
+        ]
+    }
+    
+    if not os.path.exists(note_path):
+        return {cat: [{"text": t, "done": False} for t in tlist] for cat, tlist in tasks_def.items()}
+        
+    try:
+        with open(note_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            
+        result = {}
+        for cat, tlist in tasks_def.items():
+            cat_tasks = []
+            for t in tlist:
+                escaped_t = re.escape(t)
+                match = re.search(r"- \[\s*([x ]?)\s*\]\s*" + escaped_t, content, re.IGNORECASE)
+                if match:
+                    done = match.group(1).lower() == "x"
+                else:
+                    done = False
+                cat_tasks.append({"text": t, "done": done})
+            result[cat] = cat_tasks
+            
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ─── Internal API ─────────────────────────────────────────────────────────────
 
 @app.get("/internal/vault-data")

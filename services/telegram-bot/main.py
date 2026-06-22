@@ -114,31 +114,42 @@ def get_status_formatted() -> str:
         print(f"[Telegram Bot] Error fetching SRE status: {e}")
     return "⚠️ Erro ao comunicar com o gamification-service."
 
-def get_unified_markup(routine_buttons=None) -> dict:
+def get_daily_tasks_data() -> dict:
+    try:
+        r = requests.get(f"{VAULT_SVC_URL}/api/daily-tasks", timeout=5)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        print(f"[Telegram Bot] Error fetching daily tasks: {e}")
+    return {}
+
+def get_routine_markup(category: str, tasks: list) -> dict:
     keyboard = []
-    if routine_buttons:
-        for r_row in routine_buttons:
-            keyboard.append(r_row)
-            
-    habits = get_today_habits()
-    if habits:
-        keyboard.append([{"text": "─── 📊 Hábitos de Hoje ───", "callback_data": "dummy_header"}])
-        row = []
-        for habit, done in habits.items():
-            emoji = get_emoji(habit)
-            status_symbol = "✅" if done else "❌"
-            btn_text = f"{emoji} {habit.replace('_', ' ').title()}: {status_symbol}"
-            callback_data = f"toggle_habit:{habit}"
-            row.append({"text": btn_text, "callback_data": callback_data})
-            if len(row) == 2:
-                keyboard.append(row)
-                row = []
-        if row:
+    row = []
+    for idx, t in enumerate(tasks):
+        status_symbol = "✅" if t["done"] else "❌"
+        btn_text = f"{idx + 1}: {status_symbol}"
+        callback_data = f"toggle_task:{category}:{idx}"
+        row.append({"text": btn_text, "callback_data": callback_data})
+    keyboard.append(row)
+    keyboard.append([{"text": "🏁 Concluir", "callback_data": f"finish_routine:{category}"}])
+    return {"inline_keyboard": keyboard}
+
+def get_habits_markup(habits_status: dict) -> dict:
+    keyboard = []
+    row = []
+    for habit, done in habits_status.items():
+        emoji = get_emoji(habit)
+        status_symbol = "✅" if done else "❌"
+        btn_text = f"{emoji} {habit.replace('_', ' ').title()}: {status_symbol}"
+        callback_data = f"toggle_habit:{habit}"
+        row.append({"text": btn_text, "callback_data": callback_data})
+        if len(row) == 2:
             keyboard.append(row)
-    else:
-        keyboard.append([{"text": "─── 📊 Hábitos de Hoje ───", "callback_data": "dummy_header"}])
-        keyboard.append([{"text": "💧 Iniciar Notas e Hábitos", "callback_data": "toggle_habit:agua"}])
-        
+            row = []
+    if row:
+        keyboard.append(row)
+    keyboard.append([{"text": "🏁 Concluir", "callback_data": "finish_habits"}])
     return {"inline_keyboard": keyboard}
 
 # ─── Guided Flow Helpers ──────────────────────────────────────────────────────
@@ -151,82 +162,55 @@ def toggle_quest_text(text: str, value: bool):
     except Exception as e:
         print(f"[Telegram Bot] Error toggling quest text: {e}")
 
-def send_step_message(step: int, message_id: int = None):
-    if step == 1:
-        text = "🐱 <b>[Passo 1/4] Rotina Doméstica</b>\nVocê limpou a caixa de areia dos gatos hoje?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim, limpei", "callback_data": "flow:1:yes"},
-                {"text": "⏭️ Pular", "callback_data": "flow:1:skip"}
-            ]
-        ]
-    elif step == 2:
-        text = "💧 <b>[Passo 2/4] Rotina Doméstica</b>\nVocê trocou a água das meninas?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim, troquei", "callback_data": "flow:2:yes"},
-                {"text": "⏭️ Pular", "callback_data": "flow:2:skip"}
-            ]
-        ]
-    elif step == 3:
-        text = "👕 <b>[Passo 3/4] Rotina Doméstica</b>\nTem roupa para guardar hoje?"
-        routine_buttons = [
-            [
-                {"text": "🟢 Sim", "callback_data": "flow:3:yes"},
-                {"text": "🔴 Não", "callback_data": "flow:3:no"}
-            ]
-        ]
-    elif step == 4:
-        text = "👕 <b>[Passo 4/4] Rotina Doméstica</b>\nVocê já guardou as roupas?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim, guardei", "callback_data": "flow:4:yes"},
-                {"text": "❌ Ainda não", "callback_data": "flow:4:no"}
-            ]
-        ]
-    else:
-        text = "🏁 <b>Rotina Doméstica Concluída!</b>\nTodas as tarefas domésticas foram devidamente atualizadas no seu Obsidian. Bom trabalho, Lucas! ☸️"
-        routine_buttons = None
+def send_work_routine_message(message_id: int = None):
+    data = get_daily_tasks_data()
+    tasks = data.get("work", [])
+    if not tasks:
+        send_message("⚠️ Não foi possível obter as tarefas de trabalho.")
+        return
         
-    markup = get_unified_markup(routine_buttons)
+    text = "🖥️ <b>Rotina de Trabalho (SRE)</b>\n\n"
+    for idx, t in enumerate(tasks):
+        status = "✅" if t["done"] else "❌"
+        text += f"{idx + 1}. {t['text']} - <b>{status}</b>\n"
+        
+    markup = get_routine_markup("work", tasks)
     if message_id:
         edit_message(message_id, text, markup)
     else:
         send_message(text, markup)
 
-def send_work_step_message(step: int, message_id: int = None):
-    if step == 1:
-        text = "🖥️ <b>[Passo 1/3] Rotina de Trabalho</b>\nVocê realizou o <b>Monitoramento & Alertas (LGTM Stack, Datadog/Grafana)</b>?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim", "callback_data": "wflow:1:yes"},
-                {"text": "❌ Não", "callback_data": "wflow:1:no"},
-                {"text": "⏭️ Pular", "callback_data": "wflow:1:skip"}
-            ]
-        ]
-    elif step == 2:
-        text = "📋 <b>[Passo 2/3] Rotina de Trabalho</b>\nVocê verificou as <b>Quests pendentes no Lucas_OS</b>?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim", "callback_data": "wflow:2:yes"},
-                {"text": "❌ Não", "callback_data": "wflow:2:no"},
-                {"text": "⏭️ Pular", "callback_data": "wflow:2:skip"}
-            ]
-        ]
-    elif step == 3:
-        text = "👥 <b>[Passo 3/3] Rotina de Trabalho</b>\nVocê participou da <b>Daily Sync & Status Report</b>?"
-        routine_buttons = [
-            [
-                {"text": "✅ Sim", "callback_data": "wflow:3:yes"},
-                {"text": "❌ Não", "callback_data": "wflow:3:no"},
-                {"text": "⏭️ Pular", "callback_data": "wflow:3:skip"}
-            ]
-        ]
+def send_domestic_routine_message(message_id: int = None):
+    data = get_daily_tasks_data()
+    tasks = data.get("domestic", [])
+    if not tasks:
+        send_message("⚠️ Não foi possível obter as tarefas domésticas.")
+        return
+        
+    text = "🏡 <b>Rotina Doméstica</b>\n\n"
+    for idx, t in enumerate(tasks):
+        status = "✅" if t["done"] else "❌"
+        text += f"{idx + 1}. {t['text']} - <b>{status}</b>\n"
+        
+    markup = get_routine_markup("domestic", tasks)
+    if message_id:
+        edit_message(message_id, text, markup)
     else:
-        text = "🏁 <b>Rotina de Trabalho Concluída!</b>\nTodas as tarefas de trabalho foram atualizadas no seu Obsidian. Bom trabalho!"
-        routine_buttons = None
+        send_message(text, markup)
 
-    markup = get_unified_markup(routine_buttons)
+def send_studies_routine_message(message_id: int = None):
+    data = get_daily_tasks_data()
+    tasks = data.get("studies", [])
+    if not tasks:
+        send_message("⚠️ Não foi possível obter as tarefas de estudos.")
+        return
+        
+    text = "📚 <b>Rotina de Estudos</b>\n\n"
+    for idx, t in enumerate(tasks):
+        status = "✅" if t["done"] else "❌"
+        text += f"{idx + 1}. {t['text']} - <b>{status}</b>\n"
+        
+    markup = get_routine_markup("studies", tasks)
     if message_id:
         edit_message(message_id, text, markup)
     else:
@@ -240,10 +224,11 @@ def handle_start():
         "Comandos disponíveis:\n"
         "⚔️ /quests - Lista suas tarefas ativas do Obsidian.\n"
         "👤 /status - Ficha de personagem SRE, XP e streak.\n"
-        "💧 /habitos - Painel interativo para registrar hábitos.\n"
+        "📊 /habitos - Controle de hábitos diários.\n"
         "🧹 /rotina - Inicia o checklist de tarefas domésticas.\n"
         "🖥️ /trabalho - Inicia o checklist de tarefas de trabalho SRE.\n"
-        "⏰ /lembretes - Exibe painel geral de hábitos e lembretes."
+        "📚 /estudos - Inicia o checklist de tarefas de estudos.\n"
+        "⏰ /lembretes - Exibe as opções de rotinas e lembretes."
     )
     send_message(welcome_text)
 
@@ -253,9 +238,23 @@ def handle_quests():
 def handle_status():
     send_message(get_status_formatted())
 
-def handle_habits():
-    markup = get_unified_markup()
-    send_message("💧 <b>Painel de Hábitos de Hoje</b>\nSelecione os botões abaixo para marcar/desmarcar:", markup)
+def handle_habits(message_id: int = None):
+    habits = get_today_habits()
+    if not habits:
+        markup = {
+            "inline_keyboard": [
+                [{"text": "💧 Iniciar Notas e Hábitos", "callback_data": "toggle_habit:agua"}]
+            ]
+        }
+        text = "📝 Nenhuma nota diária encontrada para hoje. Deseja iniciar a nota?"
+    else:
+        markup = get_habits_markup(habits)
+        text = "📊 <b>Controle de Hábitos de Hoje</b>\n\nSelecione os botões abaixo para marcar ou desmarcar seus hábitos diários:"
+        
+    if message_id:
+        edit_message(message_id, text, markup)
+    else:
+        send_message(text, markup)
 
 def handle_callback_query(callback_query: dict):
     qid = callback_query.get("id")
@@ -273,82 +272,34 @@ def handle_callback_query(callback_query: dict):
                 print(f"[Telegram Bot] Successfully toggled habit: {habit_name}")
         except Exception as e:
             print(f"[Telegram Bot] Error toggling habit: {e}")
-        
-        # Extract routine buttons to preserve top section of current layout
-        old_markup = msg.get("reply_markup", {})
-        old_keyboard = old_markup.get("inline_keyboard", [])
-        
-        routine_buttons = []
-        for row in old_keyboard:
-            if any(btn.get("callback_data") == "dummy_header" for btn in row):
-                break
-            routine_buttons.append(row)
+        handle_habits(message_id)
             
-        markup = get_unified_markup(routine_buttons if routine_buttons else None)
-        edit_message(message_id, msg.get("text", ""), markup)
+    elif data == "finish_habits":
+        edit_message(message_id, "🏁 <b>Controle de Hábitos Concluído!</b>\nSeus hábitos foram salvos no Obsidian.")
             
-    elif data == "refresh_habits":
-        old_markup = msg.get("reply_markup", {})
-        old_keyboard = old_markup.get("inline_keyboard", [])
-        
-        routine_buttons = []
-        for row in old_keyboard:
-            if any(btn.get("callback_data") == "dummy_header" for btn in row):
-                break
-            routine_buttons.append(row)
-            
-        markup = get_unified_markup(routine_buttons if routine_buttons else None)
-        edit_message(message_id, msg.get("text", ""), markup)
-            
-    elif data.startswith("flow:"):
+    elif data.startswith("toggle_task:"):
         parts = data.split(":")
-        step = int(parts[1])
-        action = parts[2]
+        category = parts[1]
+        idx = int(parts[2])
         
-        if step == 1:
-            if action == "yes":
-                toggle_quest_text("Limpar caixas de areia dos gatos", True)
-            send_step_message(2, message_id)
-        elif step == 2:
-            if action == "yes":
-                toggle_quest_text("Trocar água das meninas", True)
-            send_step_message(3, message_id)
-        elif step == 3:
-            if action == "yes":
-                send_step_message(4, message_id)
-            else:
-                toggle_quest_text("Guardar roupas", False)
-                send_step_message(5, message_id)
-        elif step == 4:
-            if action == "yes":
-                toggle_quest_text("Guardar roupas", True)
-            else:
-                toggle_quest_text("Guardar roupas", False)
-            send_step_message(5, message_id)
-
-    elif data.startswith("wflow:"):
-        parts = data.split(":")
-        step = int(parts[1])
-        action = parts[2]
-        
-        if step == 1:
-            if action == "yes":
-                toggle_quest_text("Monitoramento & Alertas (LGTM Stack, Datadog/Grafana)", True)
-            elif action == "no":
-                toggle_quest_text("Monitoramento & Alertas (LGTM Stack, Datadog/Grafana)", False)
-            send_work_step_message(2, message_id)
-        elif step == 2:
-            if action == "yes":
-                toggle_quest_text("Verificar Quests pendentes no Lucas_OS", True)
-            elif action == "no":
-                toggle_quest_text("Verificar Quests pendentes no Lucas_OS", False)
-            send_work_step_message(3, message_id)
-        elif step == 3:
-            if action == "yes":
-                toggle_quest_text("Daily Sync & Status Report", True)
-            elif action == "no":
-                toggle_quest_text("Daily Sync & Status Report", False)
-            send_work_step_message(4, message_id)
+        tasks_data = get_daily_tasks_data()
+        category_tasks = tasks_data.get(category, [])
+        if idx < len(category_tasks):
+            task = category_tasks[idx]
+            new_value = not task["done"]
+            toggle_quest_text(task["text"], new_value)
+            
+        if category == "work":
+            send_work_routine_message(message_id)
+        elif category == "domestic":
+            send_domestic_routine_message(message_id)
+        elif category == "studies":
+            send_studies_routine_message(message_id)
+            
+    elif data.startswith("finish_routine:"):
+        category = data.split(":", 1)[1]
+        cat_name = "Trabalho" if category == "work" else ("Doméstica" if category == "domestic" else "Estudos")
+        edit_message(message_id, f"🏁 <b>Rotina {cat_name} Concluída!</b>\nSuas atualizações foram salvas no Obsidian.")
             
     elif data == "show_quests":
         send_message(get_active_quests_formatted())
@@ -365,24 +316,15 @@ def trigger_reminder(time_slot: str):
         return
         
     if time_slot == "09:00":
-        send_work_step_message(1)
+        send_work_routine_message()
     elif time_slot == "12:00":
-        text = "🕛 <b>Checkpoint das 12h:</b>\nComo está o progresso? Não se esqueça de manter a hidratação e registrar seus hábitos!"
-        routine_buttons = [[{"text": "⚔️ Ver Quests Ativas", "callback_data": "show_quests"}]]
-        markup = get_unified_markup(routine_buttons)
-        send_message(text, markup)
+        handle_habits()
     elif time_slot == "15:00":
-        text = "🕒 <b>Checkpoint das 15h:</b>\nQue tal um café e 5 minutos de alongamento? Dê uma olhada nos seus hábitos e tarefas:"
-        routine_buttons = [[{"text": "⚔️ Ver Quests Ativas", "callback_data": "show_quests"}]]
-        markup = get_unified_markup(routine_buttons)
-        send_message(text, markup)
+        send_studies_routine_message()
     elif time_slot == "18:00":
-        send_step_message(1)
+        send_domestic_routine_message()
     elif time_slot == "21:00":
-        text = "🧘 <b>Fechamento das 21h:</b>\nHora de encerrar o dia! Confira o status final dos seus hábitos e sua ficha SRE:"
-        routine_buttons = [[{"text": "👤 Ver Status SRE", "callback_data": "show_status"}]]
-        markup = get_unified_markup(routine_buttons)
-        send_message(text, markup)
+        handle_habits()
 
 def scheduler_loop():
     last_triggered = {}
@@ -446,12 +388,21 @@ def main():
                         elif text == "/habitos":
                             handle_habits()
                         elif text == "/rotina":
-                            send_step_message(1)
+                            send_domestic_routine_message()
                         elif text == "/trabalho":
-                            send_work_step_message(1)
+                            send_work_routine_message()
+                        elif text == "/estudos":
+                            send_studies_routine_message()
                         elif text == "/lembretes":
-                            markup = get_unified_markup([[{"text": "⚔️ Ver Quests", "callback_data": "show_quests"}, {"text": "👤 Status SRE", "callback_data": "show_status"}]])
-                            send_message("⏰ <b>Painel de Controle e Lembretes</b>", markup)
+                            welcome_text = (
+                                "⏰ <b>Lembretes e Rotinas do Lucas_OS</b>\n\n"
+                                "Escolha uma rotina para atualizar:\n"
+                                "🖥️ /trabalho - Rotina de Trabalho\n"
+                                "🏡 /rotina - Rotina Doméstica\n"
+                                "📚 /estudos - Rotina de Estudos\n"
+                                "📊 /habitos - Controle de Hábitos"
+                            )
+                            send_message(welcome_text)
                             
                     elif "callback_query" in update:
                         cb = update["callback_query"]
