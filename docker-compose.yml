@@ -51,6 +51,21 @@ services:
     networks:
       - task-life-network
 
+  telegram-bot:
+    build:
+      context: ./services/telegram-bot
+      dockerfile: Dockerfile
+    container_name: lucas-task-life-telegram-bot
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - vault-service
+      - gamification-service
+    networks:
+      - task-life-network
+
 networks:
   task-life-network:
     driver: bridge

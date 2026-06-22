@@ -340,6 +340,58 @@ def toggle_quest(payload: Dict[str, str] = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/habits/toggle")
+def toggle_habit(payload: Dict[str, Any] = Body(...)):
+    habit = payload.get("habit")
+    day_str = payload.get("day")
+    explicit_val = payload.get("value")
+    
+    if not habit:
+        raise HTTPException(status_code=400, detail="Missing habit name")
+    
+    if not day_str:
+        day_str = date.today().strftime("%Y-%m-%d")
+        
+    daily_dir = os.path.join(VAULT_PATH, "00_Diario")
+    os.makedirs(daily_dir, exist_ok=True)
+    note_path = os.path.join(daily_dir, f"{day_str}.md")
+    
+    # If daily note doesn't exist, create it from template
+    if not os.path.exists(note_path):
+        template_path = os.path.join(VAULT_PATH, "99_Modelos/template-diario.md")
+        template_content = ""
+        if os.path.exists(template_path):
+            try:
+                with open(template_path, "r", encoding="utf-8") as tf:
+                    template_content = tf.read()
+                # Replacements
+                template_content = template_content.replace('<% tp.date.now("YYYY-MM-DD") %>', day_str)
+                template_content = template_content.replace('{{date:YYYY-MM-DD}}', day_str)
+                template_content = re.sub(r"<%[\s\S]*?%>", "", template_content)
+            except Exception as e:
+                print(f"Error reading template: {e}")
+        
+        try:
+            with open(note_path, "w", encoding="utf-8") as nf:
+                nf.write(template_content)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to create daily note: {e}")
+            
+    try:
+        post = frontmatter.load(note_path)
+        current_val = post.get(habit, False)
+        is_done = str(current_val).lower() in ["true", "yes", "1", "y"]
+        
+        new_val = explicit_val if explicit_val is not None else (not is_done)
+        post[habit] = new_val
+        
+        with open(note_path, "w", encoding="utf-8") as f:
+            f.write(frontmatter.dumps(post))
+            
+        return {"status": "success", "habit": habit, "new_state": new_val, "day": day_str}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update habit: {e}")
+
 # ─── Internal API ─────────────────────────────────────────────────────────────
 
 @app.get("/internal/vault-data")
