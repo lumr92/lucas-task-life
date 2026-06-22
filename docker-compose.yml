@@ -24,6 +24,8 @@ services:
     container_name: lucas-task-life-vault-service
     ports:
       - "9001:9001"
+    environment:
+      - TZ=America/Sao_Paulo
     volumes:
       - ${OBSIDIAN_VAULT_PATH}:/vault
     networks:
@@ -60,6 +62,7 @@ services:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - PYTHONUNBUFFERED=1
+      - TZ=America/Sao_Paulo
     depends_on:
       - vault-service
       - gamification-service
