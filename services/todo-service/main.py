@@ -39,17 +39,17 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Check if 'frequency' column exists in recurring_tasks
+    # Check if 'month' column exists in recurring_tasks
     cursor.execute("""
         SELECT EXISTS (
             SELECT 1 
             FROM information_schema.columns 
-            WHERE table_name='recurring_tasks' AND column_name='frequency'
+            WHERE table_name='recurring_tasks' AND column_name='month'
         );
     """)
-    has_frequency = cursor.fetchone()[0]
-    if not has_frequency:
-        print("[Todo Service] Upgrading recurring_tasks table schema...")
+    has_month = cursor.fetchone()[0]
+    if not has_month:
+        print("[Todo Service] Upgrading recurring_tasks table schema (adding month)...")
         cursor.execute("DROP TABLE IF EXISTS recurring_tasks;")
         conn.commit()
 
@@ -67,14 +67,15 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recurring_tasks (
             id SERIAL PRIMARY KEY,
-            frequency VARCHAR(50) NOT NULL DEFAULT 'weekly', -- 'weekly', 'monthly', 'interval'
+            frequency VARCHAR(50) NOT NULL DEFAULT 'weekly', -- 'weekly', 'monthly', 'interval', 'yearly'
             weekday INTEGER,
             day_of_month INTEGER,
+            month INTEGER,
             interval_days INTEGER,
             base_date VARCHAR(10),
             category VARCHAR(50) NOT NULL,
             task_text TEXT NOT NULL,
-            UNIQUE(frequency, weekday, day_of_month, interval_days, base_date, category, task_text)
+            UNIQUE(frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text)
         );
     """)
     conn.commit()
@@ -87,6 +88,7 @@ def init_db():
         cursor.execute("INSERT INTO recurring_tasks (frequency, weekday, category, task_text) VALUES ('weekly', 2, 'domestic', 'Lavar roupa')")
         cursor.execute("INSERT INTO recurring_tasks (frequency, interval_days, base_date, category, task_text) VALUES ('interval', 15, '2026-06-22', 'domestic', 'Trocar lençóis da cama')")
         cursor.execute("INSERT INTO recurring_tasks (frequency, day_of_month, category, task_text) VALUES ('monthly', 1, 'domestic', 'Limpeza pesada da casa')")
+        cursor.execute("INSERT INTO recurring_tasks (frequency, month, day_of_month, category, task_text) VALUES ('yearly', 12, 25, 'domestic', 'Trocar presentes de Natal')")
         conn.commit()
         
     cursor.close()
@@ -140,13 +142,15 @@ def db_get_or_create_tasks(day_str: str) -> Dict[str, list]:
             query_date = datetime.strptime(day_str, "%Y-%m-%d").date()
             weekday = query_date.weekday()
             day_of_month = query_date.day
+            month = query_date.month
         except Exception:
             query_date = None
             weekday = None
             day_of_month = None
+            month = None
             
         # Get all recurring tasks
-        cursor.execute("SELECT frequency, weekday, day_of_month, interval_days, base_date, category, task_text FROM recurring_tasks")
+        cursor.execute("SELECT frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text FROM recurring_tasks")
         all_routines = cursor.fetchall()
         
         # Filter matching routines
@@ -156,6 +160,8 @@ def db_get_or_create_tasks(day_str: str) -> Dict[str, list]:
             if freq == "weekly" and weekday is not None and r["weekday"] == weekday:
                 matched_tasks.append(r)
             elif freq == "monthly" and day_of_month is not None and r["day_of_month"] == day_of_month:
+                matched_tasks.append(r)
+            elif freq == "yearly" and month is not None and day_of_month is not None and r["month"] == month and r["day_of_month"] == day_of_month:
                 matched_tasks.append(r)
             elif freq == "interval" and query_date is not None and r["interval_days"] and r["base_date"]:
                 try:
@@ -356,7 +362,7 @@ def get_routines_endpoint():
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
-        cursor.execute("SELECT id, frequency, weekday, day_of_month, interval_days, base_date, category, task_text FROM recurring_tasks ORDER BY frequency DESC, weekday ASC, day_of_month ASC, id ASC")
+        cursor.execute("SELECT id, frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text FROM recurring_tasks ORDER BY frequency DESC, weekday ASC, month ASC, day_of_month ASC, id ASC")
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -379,6 +385,7 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
         
     weekday = payload.get("weekday")
     day_of_month = payload.get("day_of_month")
+    month = payload.get("month")
     interval_days = payload.get("interval_days")
     base_date = payload.get("base_date")
     
@@ -386,11 +393,21 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
         if weekday is None or not (0 <= weekday <= 6):
             raise HTTPException(status_code=400, detail="Invalid weekday for weekly routine (must be 0-6)")
         day_of_month = None
+        month = None
         interval_days = None
         base_date = None
     elif frequency == "monthly":
         if day_of_month is None or not (1 <= day_of_month <= 31):
             raise HTTPException(status_code=400, detail="Invalid day_of_month for monthly routine (must be 1-31)")
+        weekday = None
+        month = None
+        interval_days = None
+        base_date = None
+    elif frequency == "yearly":
+        if month is None or not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="Invalid month for yearly routine (must be 1-12)")
+        if day_of_month is None or not (1 <= day_of_month <= 31):
+            raise HTTPException(status_code=400, detail="Invalid day_of_month for yearly routine (must be 1-31)")
         weekday = None
         interval_days = None
         base_date = None
@@ -405,6 +422,7 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
             raise HTTPException(status_code=400, detail="Invalid base_date format (must be YYYY-MM-DD)")
         weekday = None
         day_of_month = None
+        month = None
     else:
         raise HTTPException(status_code=400, detail="Invalid frequency type")
         
@@ -412,12 +430,12 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cursor.execute(
-            "INSERT INTO recurring_tasks (frequency, weekday, day_of_month, interval_days, base_date, category, task_text) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
-            "ON CONFLICT (frequency, weekday, day_of_month, interval_days, base_date, category, task_text) "
+            "INSERT INTO recurring_tasks (frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
+            "ON CONFLICT (frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text) "
             "DO UPDATE SET task_text=EXCLUDED.task_text "
-            "RETURNING id, frequency, weekday, day_of_month, interval_days, base_date, category, task_text",
-            (frequency, weekday, day_of_month, interval_days, base_date, category, text)
+            "RETURNING id, frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text",
+            (frequency, weekday, day_of_month, month, interval_days, base_date, category, text)
         )
         new_r = cursor.fetchone()
         conn.commit()

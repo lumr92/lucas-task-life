@@ -417,7 +417,7 @@
 
       <!-- Other Recurrences Section -->
       <div id="other-routines-section" style="margin-top:1.5rem; border-top:1px solid rgba(59, 130, 246, 0.2); padding-top:1.5rem; margin-bottom:2rem;">
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:1.5rem;">
           <div>
             <h4 class="mono text-cyan" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.85rem;">📅 Rotinas Mensais</h4>
             <div id="routine-list-monthly" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
@@ -425,6 +425,10 @@
           <div>
             <h4 class="mono text-cyan" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.85rem;">🔄 Rotinas por Intervalo (Dias)</h4>
             <div id="routine-list-interval" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+          </div>
+          <div>
+            <h4 class="mono text-cyan" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.85rem;">🎂 Rotinas Anuais</h4>
+            <div id="routine-list-yearly" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
           </div>
         </div>
       </div>
@@ -436,6 +440,7 @@
         <select id="routine-freq-select" class="add-task-input" style="max-width:140px; font-family:'Inter',sans-serif;" onchange="toggleFrequencyFields()" required>
           <option value="weekly" selected>Semanal</option>
           <option value="monthly">Mensal</option>
+          <option value="yearly">Anual</option>
           <option value="interval">A cada X dias</option>
         </select>
 
@@ -452,6 +457,30 @@
         <div id="routine-dom-container" style="display:none; align-items:center; gap:0.4rem;">
           <span class="mono text-muted" style="font-size:0.8rem;">Dia:</span>
           <input type="number" id="routine-dom-input" class="add-task-input" min="1" max="31" placeholder="1-31" style="max-width:70px;"/>
+        </div>
+
+        <div id="routine-yearly-container" style="display:none; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span class="mono text-muted" style="font-size:0.8rem;">Dia:</span>
+            <input type="number" id="routine-yearly-day-input" class="add-task-input" min="1" max="31" placeholder="1-31" style="max-width:70px;"/>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span class="mono text-muted" style="font-size:0.8rem;">Mês:</span>
+            <select id="routine-yearly-month-select" class="add-task-input" style="max-width:130px; font-family:'Inter',sans-serif;">
+              <option value="1">Janeiro</option>
+              <option value="2">Fevereiro</option>
+              <option value="3">Março</option>
+              <option value="4">Abril</option>
+              <option value="5">Maio</option>
+              <option value="6">Junho</option>
+              <option value="7">Julho</option>
+              <option value="8">Agosto</option>
+              <option value="9">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+          </div>
         </div>
 
         <div id="routine-interval-container" style="display:none; align-items:center; gap:0.75rem; flex-wrap:wrap;">
@@ -645,15 +674,18 @@
       const freq = document.getElementById('routine-freq-select').value;
       const daySelect = document.getElementById('routine-day-select');
       const domContainer = document.getElementById('routine-dom-container');
+      const yearlyContainer = document.getElementById('routine-yearly-container');
       const intervalContainer = document.getElementById('routine-interval-container');
       
       // Hide all dynamic inputs
       daySelect.style.display = 'none';
       domContainer.style.display = 'none';
+      yearlyContainer.style.display = 'none';
       intervalContainer.style.display = 'none';
       
       // Remove required/min/max constraints dynamically if not used
       document.getElementById('routine-dom-input').required = false;
+      document.getElementById('routine-yearly-day-input').required = false;
       document.getElementById('routine-interval-input').required = false;
       document.getElementById('routine-base-date').required = false;
       
@@ -662,6 +694,9 @@
       } else if (freq === 'monthly') {
         domContainer.style.display = 'flex';
         document.getElementById('routine-dom-input').required = true;
+      } else if (freq === 'yearly') {
+        yearlyContainer.style.display = 'flex';
+        document.getElementById('routine-yearly-day-input').required = true;
       } else if (freq === 'interval') {
         intervalContainer.style.display = 'flex';
         document.getElementById('routine-interval-input').required = true;
@@ -688,6 +723,7 @@
         }
         document.getElementById('routine-list-monthly').innerHTML = '';
         document.getElementById('routine-list-interval').innerHTML = '';
+        document.getElementById('routine-list-yearly').innerHTML = '';
         
         // Render
         routines.forEach(r => {
@@ -699,6 +735,10 @@
           } else if (r.frequency === 'monthly') {
             container = document.getElementById('routine-list-monthly');
             extraInfo = `<span style="font-size:0.65rem; color:var(--text-muted);">[Todo dia ${r.day_of_month}]</span>`;
+          } else if (r.frequency === 'yearly') {
+            container = document.getElementById('routine-list-yearly');
+            const monthNames = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+            extraInfo = `<span style="font-size:0.65rem; color:var(--text-muted);">[Todo dia ${r.day_of_month}/${monthNames[r.month]}]</span>`;
           } else if (r.frequency === 'interval') {
             container = document.getElementById('routine-list-interval');
             const formattedDate = r.base_date ? r.base_date.split('-').reverse().slice(0, 2).join('/') : ''; // DD/MM format
@@ -749,6 +789,11 @@
         if (intervalContainer && intervalContainer.children.length === 0) {
           intervalContainer.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Sem rotinas por intervalo</span>';
         }
+
+        const yearlyContainer = document.getElementById('routine-list-yearly');
+        if (yearlyContainer && yearlyContainer.children.length === 0) {
+          yearlyContainer.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Sem rotinas anuais</span>';
+        }
       } catch (err) {
         console.error('Erro ao buscar rotinas:', err);
       }
@@ -774,6 +819,9 @@
         payload.weekday = parseInt(document.getElementById('routine-day-select').value);
       } else if (frequency === 'monthly') {
         payload.day_of_month = parseInt(document.getElementById('routine-dom-input').value);
+      } else if (frequency === 'yearly') {
+        payload.day_of_month = parseInt(document.getElementById('routine-yearly-day-input').value);
+        payload.month = parseInt(document.getElementById('routine-yearly-month-select').value);
       } else if (frequency === 'interval') {
         payload.interval_days = parseInt(document.getElementById('routine-interval-input').value);
         payload.base_date = document.getElementById('routine-base-date').value;
@@ -789,6 +837,7 @@
           // Reset text and input values
           document.getElementById('routine-text-input').value = '';
           document.getElementById('routine-dom-input').value = '';
+          document.getElementById('routine-yearly-day-input').value = '';
           document.getElementById('routine-interval-input').value = '';
           
           loadRoutines();
