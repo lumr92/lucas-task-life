@@ -133,6 +133,46 @@ def send_studies_routine_message(message_id: int = None):
     else:
         send_message(text, markup)
 
+def send_health_routine_message(message_id: int = None):
+    data = get_daily_tasks_data()
+    tasks = data.get("health", [])
+    if not tasks:
+        send_message("⚠️ Não foi possível obter as tarefas de saúde.")
+        return
+        
+    text = "❤️ <b>Rotina de Saúde & Bem-estar</b>\n\n"
+    for idx, t in enumerate(tasks):
+        status = "✅" if t["done"] else "❌"
+        text += f"{idx + 1}. {t['text']} - <b>{status}</b>\n"
+        
+    text += f"\n🔗 <a href='{TODO_APP_URL}'>Acessar Web App Todo-List</a>"
+        
+    markup = get_routine_markup("health", tasks)
+    if message_id:
+        edit_message(message_id, text, markup)
+    else:
+        send_message(text, markup)
+
+def send_finance_routine_message(message_id: int = None):
+    data = get_daily_tasks_data()
+    tasks = data.get("finance", [])
+    if not tasks:
+        send_message("⚠️ Não foi possível obter as tarefas de finanças.")
+        return
+        
+    text = "💰 <b>Rotina de Finanças & Planejamento</b>\n\n"
+    for idx, t in enumerate(tasks):
+        status = "✅" if t["done"] else "❌"
+        text += f"{idx + 1}. {t['text']} - <b>{status}</b>\n"
+        
+    text += f"\n🔗 <a href='{TODO_APP_URL}'>Acessar Web App Todo-List</a>"
+        
+    markup = get_routine_markup("finance", tasks)
+    if message_id:
+        edit_message(message_id, text, markup)
+    else:
+        send_message(text, markup)
+
 def send_general_summary_message(is_final: bool = False):
     data = get_daily_tasks_data()
     if not data:
@@ -145,7 +185,9 @@ def send_general_summary_message(is_final: bool = False):
     categories = {
         "work": "🖥️ Trabalho SRE",
         "domestic": "🏡 Rotina Doméstica",
-        "studies": "📚 Estudos & Labs"
+        "studies": "📚 Estudos & Labs",
+        "health": "❤️ Saúde & Bem-estar",
+        "finance": "💰 Finanças & Planejamento"
     }
     
     total_tasks = 0
@@ -189,6 +231,8 @@ def handle_start():
         "🧹 /rotina - Inicia o checklist de tarefas domésticas.\n"
         "🖥️ /trabalho - Inicia o checklist de tarefas de trabalho SRE.\n"
         "📚 /estudos - Inicia o checklist de tarefas de estudos.\n"
+        "❤️ /saude - Inicia o checklist de tarefas de saúde.\n"
+        "💰 /financas - Inicia o checklist de tarefas de finanças.\n"
         "📊 /resumo - Exibe o progresso geral e resumo de tarefas de hoje.\n"
         "⏰ /lembretes - Exibe as opções de rotinas e lembretes."
     )
@@ -220,10 +264,14 @@ def handle_callback_query(callback_query: dict):
             send_domestic_routine_message(message_id)
         elif category == "studies":
             send_studies_routine_message(message_id)
+        elif category == "health":
+            send_health_routine_message(message_id)
+        elif category == "finance":
+            send_finance_routine_message(message_id)
             
     elif data.startswith("finish_routine:"):
         category = data.split(":", 1)[1]
-        cat_name = "Trabalho" if category == "work" else ("Doméstica" if category == "domestic" else "Estudos")
+        cat_name = "Trabalho" if category == "work" else ("Doméstica" if category == "domestic" else ("Estudos" if category == "studies" else ("Saúde" if category == "health" else "Finanças")))
         edit_message(message_id, f"🏁 <b>Rotina {cat_name} Concluída!</b>\nSuas atualizações foram salvas no Banco de Dados.")
 
 # ─── Scheduler Loop ───────────────────────────────────────────────────────────
@@ -308,6 +356,10 @@ def main():
                             send_work_routine_message()
                         elif text == "/estudos":
                             send_studies_routine_message()
+                        elif text == "/saude":
+                            send_health_routine_message()
+                        elif text == "/financas":
+                            send_finance_routine_message()
                         elif text == "/resumo":
                             send_general_summary_message(is_final=False)
                         elif text == "/lembretes":
@@ -317,6 +369,8 @@ def main():
                                 "🖥️ /trabalho - Rotina de Trabalho\n"
                                 "🏡 /rotina - Rotina Doméstica\n"
                                 "📚 /estudos - Rotina de Estudos\n"
+                                "❤️ /saude - Rotina de Saúde\n"
+                                "💰 /financas - Rotina de Finanças\n"
                                 "📊 /resumo - Resumo Geral de Hoje"
                             )
                             send_message(welcome_text)

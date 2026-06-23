@@ -74,7 +74,7 @@
 
     .columns-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 1.5rem;
       align-items: start;
     }
@@ -346,6 +346,30 @@
         </form>
       </section>
 
+      <!-- Health Column -->
+      <section class="todo-column" id="col-health">
+        <h3 class="column-title text-red">❤️ Saúde & Bem-estar</h3>
+        <div class="todo-list" id="list-health">
+          <!-- Filled dynamically -->
+        </div>
+        <form class="add-task-form" onsubmit="handleAddTask(event, 'health')">
+          <input type="text" class="add-task-input" id="input-health" placeholder="Nova tarefa de saúde..." required/>
+          <button type="submit" class="add-task-btn">+</button>
+        </form>
+      </section>
+
+      <!-- Finance Column -->
+      <section class="todo-column" id="col-finance">
+        <h3 class="column-title" style="color: var(--amber);">💰 Finanças & Controle</h3>
+        <div class="todo-list" id="list-finance">
+          <!-- Filled dynamically -->
+        </div>
+        <form class="add-task-form" onsubmit="handleAddTask(event, 'finance')">
+          <input type="text" class="add-task-input" id="input-finance" placeholder="Nova tarefa financeira..." required/>
+          <button type="submit" class="add-task-btn">+</button>
+        </form>
+      </section>
+
     </div>
 
     <!-- Routines Configuration Panel -->
@@ -446,6 +470,8 @@
           <option value="work">Trabalho SRE</option>
           <option value="domestic" selected>Doméstica</option>
           <option value="studies">Estudos & Labs</option>
+          <option value="health">Saúde & Bem-estar</option>
+          <option value="finance">Finanças & Controle</option>
         </select>
 
         <input type="text" id="routine-text-input" class="add-task-input" placeholder="Ex: Lavar roupa, Limpar o quarto..." style="flex-grow:2; min-width:200px;" required/>
@@ -484,6 +510,8 @@
         renderColumn('work', data.work || []);
         renderColumn('domestic', data.domestic || []);
         renderColumn('studies', data.studies || []);
+        renderColumn('health', data.health || []);
+        renderColumn('finance', data.finance || []);
         
         updateOverallProgress(data);
       } catch (err) {
@@ -580,7 +608,13 @@
 
     // Calculate and update progress bar
     function updateOverallProgress(data) {
-      const allTasks = [...(data.work || []), ...(data.domestic || []), ...(data.studies || [])];
+      const allTasks = [
+        ...(data.work || []),
+        ...(data.domestic || []),
+        ...(data.studies || []),
+        ...(data.health || []),
+        ...(data.finance || [])
+      ];
       if (allTasks.length === 0) {
         document.getElementById('progress-pct').textContent = '0%';
         document.getElementById('progress-fill').style.width = '0%';
@@ -681,6 +715,8 @@
             let catColor = 'var(--blue-bright)';
             if (r.category === 'domestic') catColor = 'var(--green)';
             if (r.category === 'studies') catColor = 'var(--cyan)';
+            if (r.category === 'health') catColor = 'var(--red)';
+            if (r.category === 'finance') catColor = 'var(--amber)';
             
             item.innerHTML = `
               <div style="display:flex; flex-direction:column; flex-grow:1; gap:0.15rem;">

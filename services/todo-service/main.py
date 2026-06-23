@@ -115,6 +115,14 @@ DEFAULT_TASKS = {
         "Avançar no DevOps Study Plan",
         "Fazer Labs/Prática de Código",
         "Revisar e Documentar Aprendizados"
+    ],
+    "health": [
+        "Beber 2L de água",
+        "Exercício físico / Alongamento"
+    ],
+    "finance": [
+        "Registrar despesas do dia",
+        "Verificar saldo/faturas"
     ]
 }
 
@@ -183,7 +191,7 @@ def db_get_or_create_tasks(day_str: str) -> Dict[str, list]:
     cursor.close()
     conn.close()
     
-    result = {"work": [], "domestic": [], "studies": []}
+    result = {"work": [], "domestic": [], "studies": [], "health": [], "finance": []}
     for row in rows:
         cat = row["category"]
         if cat in result:
@@ -224,7 +232,7 @@ def add_task_endpoint(payload: Dict[str, Any] = Body(...)):
     if not day:
         day = date.today().strftime("%Y-%m-%d")
         
-    if category not in ["work", "domestic", "studies"]:
+    if category not in ["work", "domestic", "studies", "health", "finance"]:
         raise HTTPException(status_code=400, detail="Invalid category")
         
     # Ensure day is initialized with defaults first
@@ -366,7 +374,7 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
     
     if not category or not text:
         raise HTTPException(status_code=400, detail="Missing category or text")
-    if category not in ["work", "domestic", "studies"]:
+    if category not in ["work", "domestic", "studies", "health", "finance"]:
         raise HTTPException(status_code=400, detail="Invalid category")
         
     weekday = payload.get("weekday")
