@@ -67,7 +67,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS recurring_tasks (
             id SERIAL PRIMARY KEY,
-            frequency VARCHAR(50) NOT NULL DEFAULT 'weekly', -- 'weekly', 'monthly', 'interval', 'yearly'
+            frequency VARCHAR(50) NOT NULL DEFAULT 'weekly', -- 'weekly', 'monthly', 'interval', 'yearly', 'daily', 'weekdays', 'weekends'
             weekday INTEGER,
             day_of_month INTEGER,
             month INTEGER,
@@ -75,11 +75,49 @@ def init_db():
             base_date VARCHAR(10),
             category VARCHAR(50) NOT NULL,
             task_text TEXT NOT NULL,
-            UNIQUE(frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text)
+            UNIQUE NULLS NOT DISTINCT(frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text)
         );
     """)
     conn.commit()
     
+    # Clean duplicates in existing table before constraint migration
+    cursor.execute("""
+        DELETE FROM recurring_tasks a USING recurring_tasks b
+        WHERE a.id > b.id
+          AND a.frequency = b.frequency
+          AND (a.weekday = b.weekday OR (a.weekday IS NULL AND b.weekday IS NULL))
+          AND (a.day_of_month = b.day_of_month OR (a.day_of_month IS NULL AND b.day_of_month IS NULL))
+          AND (a.month = b.month OR (a.month IS NULL AND b.month IS NULL))
+          AND (a.interval_days = b.interval_days OR (a.interval_days IS NULL AND b.interval_days IS NULL))
+          AND (a.base_date = b.base_date OR (a.base_date IS NULL AND b.base_date IS NULL))
+          AND a.category = b.category
+          AND a.task_text = b.task_text;
+    """)
+    conn.commit()
+    
+    # Migrate constraint on existing databases
+    try:
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT 1 
+                FROM pg_constraint 
+                WHERE conname = 'recurring_tasks_unique_fields'
+            );
+        """)
+        has_new_constraint = cursor.fetchone()[0]
+        if not has_new_constraint:
+            print("[Todo Service] Upgrading unique constraint in recurring_tasks to NULLS NOT DISTINCT...")
+            cursor.execute("ALTER TABLE recurring_tasks DROP CONSTRAINT IF EXISTS recurring_tasks_frequency_weekday_day_of_month_month_interv_key;")
+            cursor.execute("""
+                ALTER TABLE recurring_tasks 
+                ADD CONSTRAINT recurring_tasks_unique_fields 
+                UNIQUE NULLS NOT DISTINCT(frequency, weekday, day_of_month, month, interval_days, base_date, category, task_text);
+            """)
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        print(f"[Todo Service] Warning: Could not migrate unique constraint to NULLS NOT DISTINCT: {e}")
+
     cursor.execute("SELECT COUNT(*) FROM recurring_tasks")
     count = cursor.fetchone()[0]
     if count == 0:
@@ -162,6 +200,12 @@ def db_get_or_create_tasks(day_str: str) -> Dict[str, list]:
             elif freq == "monthly" and day_of_month is not None and r["day_of_month"] == day_of_month:
                 matched_tasks.append(r)
             elif freq == "yearly" and month is not None and day_of_month is not None and r["month"] == month and r["day_of_month"] == day_of_month:
+                matched_tasks.append(r)
+            elif freq == "daily":
+                matched_tasks.append(r)
+            elif freq == "weekdays" and weekday is not None and weekday in [0, 1, 2, 3, 4]:
+                matched_tasks.append(r)
+            elif freq == "weekends" and weekday is not None and weekday in [5, 6]:
                 matched_tasks.append(r)
             elif freq == "interval" and query_date is not None and r["interval_days"] and r["base_date"]:
                 try:
@@ -409,6 +453,12 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
         if day_of_month is None or not (1 <= day_of_month <= 31):
             raise HTTPException(status_code=400, detail="Invalid day_of_month for yearly routine (must be 1-31)")
         weekday = None
+        interval_days = None
+        base_date = None
+    elif frequency in ["daily", "weekdays", "weekends"]:
+        weekday = None
+        day_of_month = None
+        month = None
         interval_days = None
         base_date = None
     elif frequency == "interval":
