@@ -234,6 +234,27 @@ def db_get_or_create_tasks(day_str: str) -> Dict[str, list]:
                 except Exception as e:
                     print(f"Error inserting default task: {e}")
         conn.commit()
+
+        # Carry forward pending tasks from the last active day
+        try:
+            cursor.execute("SELECT day FROM todo_tasks WHERE day < %s ORDER BY day DESC LIMIT 1", (day_str,))
+            prev_day_row = cursor.fetchone()
+            if prev_day_row:
+                prev_day = prev_day_row["day"]
+                cursor.execute("SELECT category, task_text FROM todo_tasks WHERE day = %s AND done = FALSE", (prev_day,))
+                pending_tasks = cursor.fetchall()
+                for pt in pending_tasks:
+                    text = pt["task_text"]
+                    if not text.startswith("⚠️ [ATRASADA] "):
+                        text = f"⚠️ [ATRASADA] {text}"
+                    
+                    cursor.execute(
+                        "INSERT INTO todo_tasks (day, category, task_text, done) VALUES (%s, %s, %s, FALSE) ON CONFLICT DO NOTHING",
+                        (day_str, pt["category"], text)
+                    )
+                conn.commit()
+        except Exception as pe:
+            print(f"Error carrying forward pending tasks: {pe}")
         
     # Fetch all tasks for today
     cursor.execute("SELECT id, category, task_text, done FROM todo_tasks WHERE day = %s ORDER BY id ASC", (day_str,))
