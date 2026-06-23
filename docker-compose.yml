@@ -12,8 +12,7 @@ services:
       - ./static:/usr/share/nginx/html/static:ro
     depends_on:
       - vault-service
-      - calendar-service
-      - gamification-service
+      - todo-service
     networks:
       - task-life-network
 
@@ -31,28 +30,6 @@ services:
     networks:
       - task-life-network
 
-  calendar-service:
-    build:
-      context: ./services/calendar-service
-      dockerfile: Dockerfile
-    container_name: lucas-task-life-calendar-service
-    ports:
-      - "9002:9002"
-    networks:
-      - task-life-network
-
-  gamification-service:
-    build:
-      context: ./services/gamification-service
-      dockerfile: Dockerfile
-    container_name: lucas-task-life-gamification-service
-    ports:
-      - "9003:9003"
-    volumes:
-      - ./config.json:/app/config.json
-    networks:
-      - task-life-network
-
   telegram-bot:
     build:
       context: ./services/telegram-bot
@@ -61,14 +38,52 @@ services:
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TODO_APP_URL=${TODO_APP_URL}
       - PYTHONUNBUFFERED=1
       - TZ=America/Sao_Paulo
     depends_on:
       - vault-service
-      - gamification-service
+      - todo-service
+    networks:
+      - task-life-network
+
+  todo-service:
+    build:
+      context: ./services/todo-service
+      dockerfile: Dockerfile
+    container_name: lucas-task-life-todo-service
+    ports:
+      - "9005:9005"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=lucas_todo
+      - POSTGRES_USER=lucas_user
+      - POSTGRES_PASSWORD=lucas_password
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - postgres
+    networks:
+      - task-life-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: lucas-task-life-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=lucas_todo
+      - POSTGRES_USER=lucas_user
+      - POSTGRES_PASSWORD=lucas_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - task-life-network
 
 networks:
   task-life-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+
+

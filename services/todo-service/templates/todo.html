@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lucas_OS — Todo List</title>
+  <meta name="description" content="Painel de controle isolado para as rotinas diárias do Lucas."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <style>
+    /* Custom style overrides for Todo App */
+    .todo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    
+    .todo-logo-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .todo-logo-area h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 800;
+      font-size: 2rem;
+      background: linear-gradient(90deg, #fff, var(--blue-bright));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    .date-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.4rem 0.8rem;
+    }
+
+    .date-control input[type="date"] {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      outline: none;
+      color-scheme: dark;
+    }
+
+    .progress-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.05);
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    .columns-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .columns-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .todo-column {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 400px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .todo-column:hover {
+      border-color: var(--blue-primary);
+      box-shadow: 0 0 16px var(--blue-glow);
+    }
+
+    .column-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      padding-bottom: 0.75rem;
+    }
+
+    .todo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .task-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem 1rem;
+      transition: all 0.2s;
+      gap: 0.75rem;
+    }
+
+    .task-item:hover {
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .task-item.done {
+      opacity: 0.55;
+      background: rgba(8, 12, 20, 0.4);
+    }
+
+    .task-item-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      flex-grow: 1;
+    }
+
+    .checkbox-btn {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      border: 2px solid var(--blue-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+      background: transparent;
+    }
+
+    .task-item.done .checkbox-btn {
+      background: var(--blue-primary);
+      border-color: var(--blue-primary);
+    }
+
+    .checkbox-btn::after {
+      content: "✓";
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .task-item.done .checkbox-btn::after {
+      display: block;
+    }
+
+    .task-text {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .task-item.done .task-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .delete-btn:hover {
+      color: var(--red);
+      background: rgba(244, 63, 94, 0.1);
+    }
+
+    .add-task-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: auto;
+      border-top: 1px solid rgba(59, 130, 246, 0.1);
+      padding-top: 1rem;
+    }
+
+    .add-task-input {
+      flex-grow: 1;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.5rem 0.75rem;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .add-task-input:focus {
+      border-color: var(--blue-primary);
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+    }
+
+    .add-task-btn {
+      background: var(--blue-dim);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 0.5rem 1rem;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .add-task-btn:hover {
+      background: var(--blue-primary);
+    }
+
+    .empty-message {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      font-style: italic;
+      padding: 2rem 0;
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="scanlines"></div>
+
+  <!-- ── TOP BAR ──────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <span class="topbar-logo">LUCAS_OS</span>
+      <span class="topbar-version mono">v3.0</span>
+    </div>
+    <div class="topbar-right">
+      <span class="status-dot online"></span>
+      <span class="mono text-muted" style="font-size:0.75rem">SYSTEM ONLINE</span>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTENT ─────────────────────────────── -->
+  <main class="content">
+    
+    <!-- Title & Date Selector -->
+    <div class="todo-header">
+      <div class="todo-logo-area">
+        <h1>DAILY CHECKLIST</h1>
+        <span class="mono text-cyan" style="font-size:0.8rem">&gt; DATABASE_POSTGRESQL // STANDALONE</span>
+      </div>
+      <div class="date-control">
+        <label for="todo-date" class="mono text-muted" style="font-size:0.75rem; margin-right: 0.25rem;">DATE:</label>
+        <input type="date" id="todo-date"/>
+        <button class="add-task-btn" onclick="toggleRoutinesPanel()" style="background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.8rem; margin-left: 0.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; display: flex; align-items: center; gap: 0.3rem;">⚙️ ROTINAS</button>
+      </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="progress-section">
+      <div class="progress-meta">
+        <span class="text-blue mono">&gt; COMPLETION_PROGRESS</span>
+        <span class="text-cyan mono" id="progress-pct">0%</span>
+      </div>
+      <div class="xp-bar" style="height: 12px;">
+        <div class="xp-fill" id="progress-fill" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Columns Grid -->
+    <div class="columns-grid">
+      
+      <!-- SRE Work Column -->
+      <section class="todo-column" id="col-work">
+        <h3 class="column-title text-blue">🖥️ Trabalho SRE</h3>
+        <div class="todo-list" id="list-work">
+          <!-- Filled dynamically -->
+        </div>
+        <form class="add-task-form" onsubmit="handleAddTask(event, 'work')">
+          <input type="text" class="add-task-input" id="input-work" placeholder="Nova tarefa de trabalho..." required/>
+          <button type="submit" class="add-task-btn">+</button>
+        </form>
+      </section>
+
+      <!-- Domestic Column -->
+      <section class="todo-column" id="col-domestic">
+        <h3 class="column-title text-green">🏡 Rotina Doméstica</h3>
+        <div class="todo-list" id="list-domestic">
+          <!-- Filled dynamically -->
+        </div>
+        <form class="add-task-form" onsubmit="handleAddTask(event, 'domestic')">
+          <input type="text" class="add-task-input" id="input-domestic" placeholder="Nova tarefa doméstica..." required/>
+          <button type="submit" class="add-task-btn">+</button>
+        </form>
+      </section>
+
+      <!-- Studies Column -->
+      <section class="todo-column" id="col-studies">
+        <h3 class="column-title text-cyan">📚 Estudos & Labs</h3>
+        <div class="todo-list" id="list-studies">
+          <!-- Filled dynamically -->
+        </div>
+        <form class="add-task-form" onsubmit="handleAddTask(event, 'studies')">
+          <input type="text" class="add-task-input" id="input-studies" placeholder="Nova tarefa de estudos..." required/>
+          <button type="submit" class="add-task-btn">+</button>
+        </form>
+      </section>
+
+    </div>
+
+    <!-- Routines Configuration Panel -->
+    <section id="routines-panel" class="card" style="display:none; margin-top:2.5rem; border-color: var(--blue-primary); box-shadow: 0 0 16px var(--blue-glow);">
+      <div class="todo-header" style="margin-bottom:1.5rem; border-bottom:1px solid rgba(59, 130, 246, 0.2); padding-bottom:0.75rem;">
+        <div class="todo-logo-area">
+          <h2 class="mono" style="font-size:1.2rem; color:var(--blue-bright);">&gt; ROTINAS_E_RECORRENCIAS // CONFIG</h2>
+          <span class="mono text-muted" style="font-size:0.75rem;">Defina tarefas automáticas semanais, mensais ou por intervalo de dias</span>
+        </div>
+        <button class="delete-btn" onclick="toggleRoutinesPanel()" style="font-size:1.25rem; font-weight:bold; color:var(--text-muted);">✕</button>
+      </div>
+      
+      <!-- Weekday columns -->
+      <h3 class="mono text-blue" style="font-size:0.9rem; margin-bottom: 0.75rem;">&gt; ROTINAS_SEMANAIS</h3>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Segunda</h4>
+          <div class="routine-day-list" id="routine-list-0" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Terça</h4>
+          <div class="routine-day-list" id="routine-list-1" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Quarta</h4>
+          <div class="routine-day-list" id="routine-list-2" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Quinta</h4>
+          <div class="routine-day-list" id="routine-list-3" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Sexta</h4>
+          <div class="routine-day-list" id="routine-list-4" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Sábado</h4>
+          <div class="routine-day-list" id="routine-list-5" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+        <div class="routine-day-col">
+          <h4 class="mono text-blue" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.8rem;">Domingo</h4>
+          <div class="routine-day-list" id="routine-list-6" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+        </div>
+      </div>
+
+      <!-- Other Recurrences Section -->
+      <div id="other-routines-section" style="margin-top:1.5rem; border-top:1px solid rgba(59, 130, 246, 0.2); padding-top:1.5rem; margin-bottom:2rem;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem;">
+          <div>
+            <h4 class="mono text-cyan" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.85rem;">📅 Rotinas Mensais</h4>
+            <div id="routine-list-monthly" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+          </div>
+          <div>
+            <h4 class="mono text-cyan" style="border-bottom:1px solid rgba(59,130,246,0.1); padding-bottom:0.3rem; margin-bottom:0.5rem; font-size:0.85rem;">🔄 Rotinas por Intervalo (Dias)</h4>
+            <div id="routine-list-interval" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add routine form -->
+      <form id="add-routine-form" onsubmit="handleAddRoutine(event)" style="display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center; background:var(--bg-surface); padding:1rem; border-radius:var(--radius); border:1px solid var(--border);">
+        <span class="mono text-cyan" style="font-size:0.85rem; font-weight:bold;">+ RECORRÊNCIA:</span>
+        
+        <select id="routine-freq-select" class="add-task-input" style="max-width:140px; font-family:'Inter',sans-serif;" onchange="toggleFrequencyFields()" required>
+          <option value="weekly" selected>Semanal</option>
+          <option value="monthly">Mensal</option>
+          <option value="interval">A cada X dias</option>
+        </select>
+
+        <select id="routine-day-select" class="add-task-input" style="max-width:140px; font-family:'Inter',sans-serif;">
+          <option value="0">Segunda-feira</option>
+          <option value="1">Terça-feira</option>
+          <option value="2">Quarta-feira</option>
+          <option value="3">Quinta-feira</option>
+          <option value="4">Sexta-feira</option>
+          <option value="5">Sábado</option>
+          <option value="6">Domingo</option>
+        </select>
+
+        <div id="routine-dom-container" style="display:none; align-items:center; gap:0.4rem;">
+          <span class="mono text-muted" style="font-size:0.8rem;">Dia:</span>
+          <input type="number" id="routine-dom-input" class="add-task-input" min="1" max="31" placeholder="1-31" style="max-width:70px;"/>
+        </div>
+
+        <div id="routine-interval-container" style="display:none; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span class="mono text-muted" style="font-size:0.8rem;">A cada:</span>
+            <input type="number" id="routine-interval-input" class="add-task-input" min="1" placeholder="ex: 15" style="max-width:80px;"/>
+            <span class="mono text-muted" style="font-size:0.8rem;">dias</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span class="mono text-muted" style="font-size:0.8rem;">Início:</span>
+            <input type="date" id="routine-base-date" class="add-task-input" style="max-width:150px; color-scheme:dark;"/>
+          </div>
+        </div>
+
+        <select id="routine-cat-select" class="add-task-input" style="max-width:140px; font-family:'Inter',sans-serif;" required>
+          <option value="work">Trabalho SRE</option>
+          <option value="domestic" selected>Doméstica</option>
+          <option value="studies">Estudos & Labs</option>
+        </select>
+
+        <input type="text" id="routine-text-input" class="add-task-input" placeholder="Ex: Lavar roupa, Limpar o quarto..." style="flex-grow:2; min-width:200px;" required/>
+        <button type="submit" class="add-task-btn" style="height:35px; min-width:80px;">ADICIONAR</button>
+      </form>
+    </section>
+
+  </main>
+
+  <!-- ── STATUS BAR ───────────────────────────────── -->
+  <footer class="statusbar">
+    <span class="mono">LUCAS_OS</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-blue">POSTGRESQL_READY</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-muted" id="sb-time">--:--</span>
+    <span class="statusbar-sep" style="margin-left:auto">|</span>
+    <span class="mono text-muted" id="sb-date">----</span>
+  </footer>
+
+  <!-- Frontend Logic script -->
+  <script>
+    // Initialize date selector to today
+    const dateInput = document.getElementById('todo-date');
+    const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local format
+    dateInput.value = todayStr;
+
+    // Load tasks for selected date
+    async function loadTasks() {
+      const selectedDate = dateInput.value;
+      try {
+        const response = await fetch(`/api/todo/tasks?day=${selectedDate}`);
+        if (!response.ok) throw new Error('Falha ao buscar tarefas');
+        const data = await response.json();
+        
+        renderColumn('work', data.work || []);
+        renderColumn('domestic', data.domestic || []);
+        renderColumn('studies', data.studies || []);
+        
+        updateOverallProgress(data);
+      } catch (err) {
+        console.error('Erro carregando tarefas:', err);
+      }
+    }
+
+    // Render a single column
+    function renderColumn(category, tasks) {
+      const container = document.getElementById(`list-${category}`);
+      container.innerHTML = '';
+      
+      if (tasks.length === 0) {
+        container.innerHTML = '<div class="empty-message">Nenhuma tarefa cadastrada.</div>';
+        return;
+      }
+
+      tasks.forEach(task => {
+        const item = document.createElement('div');
+        item.className = `task-item ${task.done ? 'done' : ''}`;
+        item.dataset.id = task.id;
+
+        item.innerHTML = `
+          <div class="task-item-left" onclick="toggleTask(${task.id}, ${task.done})">
+            <span class="checkbox-btn"></span>
+            <span class="task-text">${escapeHtml(task.text)}</span>
+          </div>
+          <button class="delete-btn" onclick="deleteTask(${task.id})" title="Excluir tarefa">🗑️</button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Toggle task done status
+    async function toggleTask(taskId, currentStatus) {
+      try {
+        const response = await fetch('/api/todo/tasks/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId, value: !currentStatus })
+        });
+        if (response.ok) {
+          loadTasks();
+        }
+      } catch (err) {
+        console.error('Erro ao marcar/desmarcar tarefa:', err);
+      }
+    }
+
+    // Add custom task
+    async function handleAddTask(event, category) {
+      event.preventDefault();
+      const input = document.getElementById(`input-${category}`);
+      const text = input.value.trim();
+      const selectedDate = dateInput.value;
+      
+      if (!text) return;
+
+      try {
+        const response = await fetch('/api/todo/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            day: selectedDate,
+            category: category,
+            text: text
+          })
+        });
+        if (response.ok) {
+          input.value = '';
+          loadTasks();
+        }
+      } catch (err) {
+        console.error('Erro ao adicionar tarefa:', err);
+      }
+    }
+
+    // Delete task
+    async function deleteTask(taskId) {
+      if (!confirm('Deseja realmente remover esta tarefa?')) return;
+      try {
+        const response = await fetch('/api/todo/tasks/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: taskId })
+        });
+        if (response.ok) {
+          loadTasks();
+        }
+      } catch (err) {
+        console.error('Erro ao excluir tarefa:', err);
+      }
+    }
+
+    // Calculate and update progress bar
+    function updateOverallProgress(data) {
+      const allTasks = [...(data.work || []), ...(data.domestic || []), ...(data.studies || [])];
+      if (allTasks.length === 0) {
+        document.getElementById('progress-pct').textContent = '0%';
+        document.getElementById('progress-fill').style.width = '0%';
+        return;
+      }
+      
+      const doneCount = allTasks.filter(t => t.done).length;
+      const percentage = Math.round((doneCount / allTasks.length) * 100);
+      
+      document.getElementById('progress-pct').textContent = `${percentage}%`;
+      document.getElementById('progress-fill').style.width = `${percentage}%`;
+    }
+
+    // Toggle routines configuration panel
+    function toggleRoutinesPanel() {
+      const panel = document.getElementById('routines-panel');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        loadRoutines();
+        panel.scrollIntoView({ behavior: 'smooth' });
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    // Toggle form fields based on selected frequency
+    function toggleFrequencyFields() {
+      const freq = document.getElementById('routine-freq-select').value;
+      const daySelect = document.getElementById('routine-day-select');
+      const domContainer = document.getElementById('routine-dom-container');
+      const intervalContainer = document.getElementById('routine-interval-container');
+      
+      // Hide all dynamic inputs
+      daySelect.style.display = 'none';
+      domContainer.style.display = 'none';
+      intervalContainer.style.display = 'none';
+      
+      // Remove required/min/max constraints dynamically if not used
+      document.getElementById('routine-dom-input').required = false;
+      document.getElementById('routine-interval-input').required = false;
+      document.getElementById('routine-base-date').required = false;
+      
+      if (freq === 'weekly') {
+        daySelect.style.display = 'block';
+      } else if (freq === 'monthly') {
+        domContainer.style.display = 'flex';
+        document.getElementById('routine-dom-input').required = true;
+      } else if (freq === 'interval') {
+        intervalContainer.style.display = 'flex';
+        document.getElementById('routine-interval-input').required = true;
+        document.getElementById('routine-base-date').required = true;
+        
+        // Default base date to today if empty
+        if (!document.getElementById('routine-base-date').value) {
+          const today = new Date().toLocaleDateString('en-CA');
+          document.getElementById('routine-base-date').value = today;
+        }
+      }
+    }
+
+    // Load recurring routines from database
+    async function loadRoutines() {
+      try {
+        const response = await fetch('/api/todo/routines');
+        if (!response.ok) throw new Error('Falha ao carregar rotinas');
+        const routines = await response.json();
+        
+        // Clean columns/lists
+        for (let i = 0; i <= 6; i++) {
+          document.getElementById(`routine-list-${i}`).innerHTML = '';
+        }
+        document.getElementById('routine-list-monthly').innerHTML = '';
+        document.getElementById('routine-list-interval').innerHTML = '';
+        
+        // Render
+        routines.forEach(r => {
+          let container = null;
+          let extraInfo = '';
+          
+          if (r.frequency === 'weekly') {
+            container = document.getElementById(`routine-list-${r.weekday}`);
+          } else if (r.frequency === 'monthly') {
+            container = document.getElementById('routine-list-monthly');
+            extraInfo = `<span style="font-size:0.65rem; color:var(--text-muted);">[Todo dia ${r.day_of_month}]</span>`;
+          } else if (r.frequency === 'interval') {
+            container = document.getElementById('routine-list-interval');
+            const formattedDate = r.base_date ? r.base_date.split('-').reverse().slice(0, 2).join('/') : ''; // DD/MM format
+            extraInfo = `<span style="font-size:0.65rem; color:var(--text-muted);">[A cada ${r.interval_days}d - Início ${formattedDate}]</span>`;
+          }
+          
+          if (container) {
+            const item = document.createElement('div');
+            item.className = 'task-item';
+            item.style.padding = '0.4rem 0.6rem';
+            item.style.fontSize = '0.78rem';
+            item.style.gap = '0.4rem';
+            
+            let catColor = 'var(--blue-bright)';
+            if (r.category === 'domestic') catColor = 'var(--green)';
+            if (r.category === 'studies') catColor = 'var(--cyan)';
+            
+            item.innerHTML = `
+              <div style="display:flex; flex-direction:column; flex-grow:1; gap:0.15rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.2rem;">
+                  <span class="mono" style="font-size:0.6rem; color:${catColor}; text-transform:uppercase;">[${r.category}]</span>
+                  ${extraInfo}
+                </div>
+                <span class="task-text" style="font-size:0.75rem;">${escapeHtml(r.task_text)}</span>
+              </div>
+              <button class="delete-btn" onclick="deleteRoutine(${r.id})" style="font-size:0.8rem; padding:0.1rem;" title="Remover rotina">🗑️</button>
+            `;
+            container.appendChild(item);
+          }
+        });
+        
+        // Show empty message for days/lists with no routines
+        for (let i = 0; i <= 6; i++) {
+          const container = document.getElementById(`routine-list-${i}`);
+          if (container && container.children.length === 0) {
+            container.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Sem rotinas</span>';
+          }
+        }
+        
+        const monthlyContainer = document.getElementById('routine-list-monthly');
+        if (monthlyContainer && monthlyContainer.children.length === 0) {
+          monthlyContainer.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Sem rotinas mensais</span>';
+        }
+        
+        const intervalContainer = document.getElementById('routine-list-interval');
+        if (intervalContainer && intervalContainer.children.length === 0) {
+          intervalContainer.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Sem rotinas por intervalo</span>';
+        }
+      } catch (err) {
+        console.error('Erro ao buscar rotinas:', err);
+      }
+    }
+
+    // Add new recurring routine
+    async function handleAddRoutine(event) {
+      event.preventDefault();
+      
+      const frequency = document.getElementById('routine-freq-select').value;
+      const category = document.getElementById('routine-cat-select').value;
+      const text = document.getElementById('routine-text-input').value.trim();
+      
+      if (!text) return;
+      
+      const payload = {
+        frequency: frequency,
+        category: category,
+        text: text
+      };
+      
+      if (frequency === 'weekly') {
+        payload.weekday = parseInt(document.getElementById('routine-day-select').value);
+      } else if (frequency === 'monthly') {
+        payload.day_of_month = parseInt(document.getElementById('routine-dom-input').value);
+      } else if (frequency === 'interval') {
+        payload.interval_days = parseInt(document.getElementById('routine-interval-input').value);
+        payload.base_date = document.getElementById('routine-base-date').value;
+      }
+      
+      try {
+        const response = await fetch('/api/todo/routines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          // Reset text and input values
+          document.getElementById('routine-text-input').value = '';
+          document.getElementById('routine-dom-input').value = '';
+          document.getElementById('routine-interval-input').value = '';
+          
+          loadRoutines();
+          loadTasks();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao criar rotina: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao criar rotina:', err);
+      }
+    }
+
+    // Delete a recurring routine
+    async function deleteRoutine(routineId) {
+      if (!confirm('Deseja realmente remover esta rotina? Ela não aparecerá automaticamente nos próximos dias.')) return;
+      try {
+        const response = await fetch('/api/todo/routines/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: routineId })
+        });
+        if (response.ok) {
+          loadRoutines();
+          loadTasks();
+        }
+      } catch (err) {
+        console.error('Erro ao excluir rotina:', err);
+      }
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Update status bar clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('sb-time').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sb-date').textContent = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    }
+
+    // Event listeners
+    dateInput.addEventListener('change', loadTasks);
+
+    // Initial setup
+    loadTasks();
+    updateClock();
+    toggleFrequencyFields();
+    setInterval(updateClock, 30000);
+  </script>
+</body>
+</html>
