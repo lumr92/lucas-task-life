@@ -416,6 +416,60 @@ def get_routines_endpoint():
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
 
+def sync_routine_to_today(routine: Dict[str, Any]):
+    today_str = date.today().strftime("%Y-%m-%d")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Check if today has already been initialized
+        cursor.execute("SELECT COUNT(*) FROM todo_tasks WHERE day = %s", (today_str,))
+        count = cursor.fetchone()[0]
+        if count > 0:
+            # Check if routine matches today
+            query_date = date.today()
+            weekday = query_date.weekday()
+            day_of_month = query_date.day
+            month = query_date.month
+            
+            matches = False
+            freq = routine.get("frequency")
+            
+            if freq == "weekly" and routine.get("weekday") == weekday:
+                matches = True
+            elif freq == "monthly" and routine.get("day_of_month") == day_of_month:
+                matches = True
+            elif freq == "yearly" and routine.get("month") == month and routine.get("day_of_month") == day_of_month:
+                matches = True
+            elif freq == "daily":
+                matches = True
+            elif freq == "weekdays" and weekday in [0, 1, 2, 3, 4]:
+                matches = True
+            elif freq == "weekends" and weekday in [5, 6]:
+                matches = True
+            elif freq == "interval" and routine.get("interval_days") and routine.get("base_date"):
+                try:
+                    base_date = datetime.strptime(routine.get("base_date"), "%Y-%m-%d").date()
+                    diff = (query_date - base_date).days
+                    if diff >= 0 and diff % routine.get("interval_days") == 0:
+                        matches = True
+                except Exception:
+                    pass
+            
+            if matches:
+                # Insert into todo_tasks if not already exists
+                cursor.execute(
+                    "INSERT INTO todo_tasks (day, category, task_text, done) "
+                    "VALUES (%s, %s, %s, FALSE) "
+                    "ON CONFLICT (day, category, task_text) DO NOTHING",
+                    (today_str, routine.get("category"), routine.get("task_text"))
+                )
+                conn.commit()
+    except Exception as e:
+        print(f"[Todo Service] Error syncing routine to today: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
 @app.post("/api/todo/routines")
 def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
     frequency = payload.get("frequency", "weekly")
@@ -491,6 +545,12 @@ def add_routine_endpoint(payload: Dict[str, Any] = Body(...)):
         conn.commit()
         cursor.close()
         conn.close()
+        
+        try:
+            sync_routine_to_today(new_r)
+        except Exception as se:
+            print(f"Error syncing routine to today: {se}")
+            
         return {"status": "success", "routine": new_r}
     except Exception as e:
         cursor.close()
