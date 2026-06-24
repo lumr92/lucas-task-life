@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LUCAS_OS // FINANCEIRO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #060814;
+      --bg-surface: #0c0e22;
+      --bg-card: rgba(16, 20, 44, 0.6);
+      --border: rgba(59, 130, 246, 0.16);
+      --border-glow: rgba(59, 130, 246, 0.4);
+      --text-main: #e2e8f0;
+      --text-muted: #64748b;
+      
+      --blue: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.3);
+      --cyan: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.3);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.3);
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.3);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.3);
+      
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-sans: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --radius: 8px;
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      line-height: 1.5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(15, 23, 42, 0.8) 0%, rgba(6, 8, 20, 1) 90%),
+        linear-gradient(rgba(18, 24, 58, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(18, 24, 58, 0.05) 1px, transparent 1px);
+      background-size: 100% 100%, 30px 30px, 30px 30px;
+    }
+
+    /* Scanlines screen effect */
+    body::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      z-index: 99999;
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .mono { font-family: var(--font-mono); }
+    .display { font-family: var(--font-display); }
+    .text-cyan { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
+    .text-blue { color: var(--blue); text-shadow: 0 0 8px var(--blue-glow); }
+    .text-green { color: var(--green); text-shadow: 0 0 8px var(--green-glow); }
+    .text-red { color: var(--red); text-shadow: 0 0 8px var(--red-glow); }
+    .text-amber { color: var(--amber); text-shadow: 0 0 8px var(--amber-glow); }
+    .text-muted { color: var(--text-muted); }
+
+    /* ── HEADER ──────────────────────────────────── */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 12, 30, 0.8);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0.75rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .logo-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo-main {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: #fff;
+    }
+
+    .logo-sub {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      margin-top: 0.1rem;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .nav-tab {
+      background: rgba(30, 41, 59, 0.2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.5rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: bold;
+      text-decoration: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .nav-tab:hover {
+      border-color: var(--border-glow);
+      color: var(--text-main);
+      background: rgba(30, 41, 59, 0.4);
+    }
+
+    .nav-tab.active {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: rgba(6, 182, 212, 0.08);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+    }
+
+    /* ── MAIN LAYOUT ─────────────────────────────── */
+    main {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      padding-bottom: 5rem;
+    }
+
+    /* Date and Config Row */
+    .controls-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+    }
+
+    .controls-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .input-month {
+      background: rgba(6, 8, 20, 0.8);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+      transition: var(--transition);
+      color-scheme: dark;
+    }
+
+    .input-month:focus {
+      border-color: var(--cyan);
+    }
+
+    /* ── PANORAMA CARDS ──────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .summary-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .summary-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .card-balance::before { background: var(--green); }
+    .card-invoices::before { background: var(--red); }
+    .card-net::before { background: var(--cyan); }
+
+    .summary-card-title {
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: bold;
+      color: var(--text-muted);
+    }
+
+    .summary-card-value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .summary-card-sub {
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 0.4rem;
+      margin-top: 0.2rem;
+    }
+
+    /* ── DASHBOARD WORKSPACE ────────────────────── */
+    .dashboard-workspace {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .dashboard-workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      padding-bottom: 0.75rem;
+    }
+
+    .panel-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Form Fields */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .input-field, .select-field {
+      background: rgba(6, 8, 20, 0.8);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      outline: none;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      transition: var(--transition);
+      width: 100%;
+    }
+
+    .input-field:focus, .select-field:focus {
+      border-color: var(--cyan);
+    }
+
+    .btn-submit {
+      background: var(--blue);
+      border: 1px solid var(--blue);
+      color: #fff;
+      font-weight: bold;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      transition: var(--transition);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-submit:hover {
+      background: rgba(59, 130, 246, 0.8);
+      border-color: var(--blue-bright);
+      box-shadow: 0 0 10px var(--blue-glow);
+    }
+
+    /* ── TRANSACTIONS LIST ───────────────────────── */
+    .ledger-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 600px;
+      overflow-y: auto;
+      padding-right: 0.25rem;
+    }
+
+    .ledger-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .ledger-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .ledger-container::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .tx-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(6, 8, 20, 0.4);
+      border: 1px solid var(--border);
+      padding: 0.6rem 1rem;
+      border-radius: 4px;
+      transition: var(--transition);
+      font-size: 0.85rem;
+      gap: 1rem;
+    }
+
+    .tx-row:hover {
+      border-color: rgba(59, 130, 246, 0.3);
+      background: rgba(6, 8, 20, 0.7);
+    }
+
+    .tx-row-left {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      flex-grow: 1;
+    }
+
+    .tx-desc {
+      font-weight: 500;
+      color: #fff;
+    }
+
+    .tx-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .tx-tag {
+      font-size: 0.65rem;
+      padding: 0.05rem 0.35rem;
+      border-radius: 2px;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .tx-tag-cat { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.2); }
+    .tx-tag-account { background: rgba(6,182,212,0.1); color: var(--cyan); border: 1px solid rgba(6,182,212,0.2); }
+    .tx-tag-card { background: rgba(245,158,11,0.1); color: var(--amber); border: 1px solid rgba(245,158,11,0.2); }
+    .tx-tag-transfer { background: rgba(16,185,129,0.1); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+
+    .tx-row-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .tx-amount {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 1rem;
+      opacity: 0.6;
+      padding: 0.25rem;
+    }
+
+    .delete-btn:hover {
+      color: var(--red);
+      opacity: 1;
+    }
+
+    /* Empty LEDGER Message */
+    .empty-ledger {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.9rem;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    /* ── RIGHT PANEL (ACCOUNTS & CARDS) ──────────── */
+    .side-panel-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+      padding-bottom: 1.25rem;
+    }
+
+    .side-panel-section:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .side-section-title {
+      font-size: 0.85rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-card {
+      background: rgba(6, 8, 20, 0.4);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .item-card:hover {
+      border-color: rgba(59, 130, 246, 0.25);
+      background: rgba(6, 8, 20, 0.6);
+    }
+
+    .item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .item-name {
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .item-subtext {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .item-balance {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+
+    /* Simple Category Progress Bar */
+    .category-stat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+    }
+
+    .category-stat-header {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-main);
+    }
+
+    .progress-bar-bg {
+      background: rgba(255, 255, 255, 0.05);
+      height: 4px;
+      border-radius: 2px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      background: var(--cyan);
+      height: 100%;
+      border-radius: 2px;
+      box-shadow: 0 0 8px var(--cyan-glow);
+    }
+
+    /* Add Forms Inline styling */
+    .inline-add-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      background: rgba(6, 8, 20, 0.8);
+      border: 1px solid var(--border);
+      padding: 0.75rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+
+    /* STATUS BAR */
+    .statusbar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 25px;
+      background: rgba(6, 8, 20, 0.95);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      z-index: 1000;
+    }
+
+    .statusbar-sep {
+      color: var(--border);
+      margin: 0 0.75rem;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ── HEADER ────────────────────────────────── -->
+  <header>
+    <div class="logo-container">
+      <span class="logo-main display">LUCAS_OS</span>
+      <span class="logo-sub mono text-cyan">> FINANCIAL_DATABASE_ACTIVE</span>
+    </div>
+    
+    <div class="nav-tabs">
+      <a href="/todo" class="nav-tab">
+        <span>📝</span> Checklist Diária
+      </a>
+      <a href="/finance" class="nav-tab active">
+        <span>💰</span> Registros Financeiros
+      </a>
+    </div>
+  </header>
+
+  <!-- ── MAIN CONTAINER ────────────────────────── -->
+  <main>
+    
+    <!-- Controls Row -->
+    <div class="controls-row">
+      <div class="controls-left">
+        <span class="mono text-cyan" style="font-size:0.85rem; font-weight:bold;">EXTRATO DO MÊS:</span>
+        <input type="month" id="finance-month" class="input-month" onchange="loadFinancialData()"/>
+      </div>
+      <div class="mono text-muted" style="font-size:0.75rem;">
+        STATUS: <span class="text-green">ONLINE</span>
+      </div>
+    </div>
+
+    <!-- ── PANORAMA CARDS ────────────────────────── -->
+    <div class="summary-grid">
+      
+      <!-- Card: Cash Balance -->
+      <div class="summary-card card-balance">
+        <span class="summary-card-title display">Saldo em Contas</span>
+        <span class="summary-card-value mono text-green" id="kpi-balance">R$ 0,00</span>
+        <div class="summary-card-sub">
+          <span class="text-muted">Total em Bancos & Dinheiro</span>
+          <span class="mono text-green">DEBIT_READY</span>
+        </div>
+      </div>
+
+      <!-- Card: Credit Card Invoices -->
+      <div class="summary-card card-invoices">
+        <span class="summary-card-title display">Faturas de Cartão</span>
+        <span class="summary-card-value mono text-amber" id="kpi-invoices">R$ 0,00</span>
+        <div class="summary-card-sub">
+          <span class="text-muted">Total acumulado no ciclo</span>
+          <span class="mono text-amber">CREDIT_OWED</span>
+        </div>
+      </div>
+
+      <!-- Card: Net Worth -->
+      <div class="summary-card card-net">
+        <span class="summary-card-title display">Patrimônio Líquido</span>
+        <span class="summary-card-value mono text-cyan" id="kpi-net">R$ 0,00</span>
+        <div class="summary-card-sub">
+          <span class="text-muted">Balanço Patrimonial</span>
+          <span class="mono text-cyan">NET_ASSETS</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── WORKSPACE ─────────────────────────────── -->
+    <div class="dashboard-workspace">
+      
+      <!-- LEFT PANEL: Ledger and Transaction Form -->
+      <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        
+        <!-- Add Transaction Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title display text-cyan">➕ NOVO LANÇAMENTO</span>
+            <span class="mono text-muted" style="font-size:0.7rem;">REGISTRY_FORM</span>
+          </div>
+          
+          <form id="add-tx-form" onsubmit="handleAddTransaction(event)">
+            <div style="display:flex; flex-direction:column; gap:0.75rem;">
+              
+              <!-- First row: Description, Amount, Date -->
+              <div class="form-grid">
+                <div>
+                  <input type="text" id="tx-description" class="input-field" placeholder="Descrição (ex: Mercado, Combustível)" required/>
+                </div>
+                <div>
+                  <input type="number" step="0.01" id="tx-amount" class="input-field" placeholder="Valor (R$)" required/>
+                </div>
+                <div>
+                  <input type="date" id="tx-date" class="input-field" style="color-scheme:dark;" required/>
+                </div>
+              </div>
+
+              <!-- Second row: Type, Category, Origin Selector -->
+              <div class="form-grid">
+                <div>
+                  <select id="tx-type" class="select-field" onchange="handleTypeChange()" required>
+                    <option value="expense" selected>📉 Despesa</option>
+                    <option value="income">📈 Receita</option>
+                    <option value="transfer">🔄 Transferência</option>
+                  </select>
+                </div>
+                <div>
+                  <select id="tx-category" class="select-field" required>
+                    <option value="Alimentação" selected>Alimentação</option>
+                    <option value="Moradia">Moradia</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Lazer">Lazer</option>
+                    <option value="Saúde">Saúde</option>
+                    <option value="Investimentos">Investimentos</option>
+                    <option value="Salário">Salário</option>
+                    <option value="Delivery">Delivery</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                </div>
+                <div>
+                  <!-- This select dynamically populates with checking accounts or cards depending on the method -->
+                  <select id="tx-origin" class="select-field" required>
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Destination selector (visible only on transfers) -->
+              <div id="tx-destination-container" class="form-grid" style="display:none;">
+                <div style="grid-column: span 2;">
+                  <span class="mono text-muted" style="font-size:0.75rem;">Conta de Destino:</span>
+                </div>
+                <div>
+                  <select id="tx-destination" class="select-field">
+                    <!-- Populated dynamically with checking accounts -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Submit button -->
+              <div style="display:flex; justify-content:flex-end; margin-top:0.25rem;">
+                <button type="submit" class="btn-submit">REGISTRAR LANÇAMENTO</button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+
+        <!-- Ledger Ledger Panel -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title display text-cyan">🧾 EXTRATO DE TRANSAÇÕES</span>
+            <span class="mono text-muted" style="font-size:0.7rem;" id="ledger-title-month">----</span>
+          </div>
+
+          <div id="ledger-list" class="ledger-container">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT PANEL: Accounts, Cards and Categories -->
+      <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        
+        <div class="panel">
+          
+          <!-- Section 1: Checking/Savings Accounts -->
+          <div class="side-panel-section">
+            <div class="side-section-title display">
+              <span>🏛️ Minhas Contas</span>
+              <button class="delete-btn" onclick="toggleInlineForm('form-add-account')" title="Cadastrar nova conta">+</button>
+            </div>
+            
+            <!-- Inline Form to Add Account -->
+            <div id="form-add-account" class="inline-add-form" style="display:none;">
+              <span class="mono text-cyan" style="font-size:0.75rem;">+ NOVA CONTA</span>
+              <input type="text" id="new-acc-name" class="input-field" placeholder="Nome (ex: Nubank, Itaú)" style="margin-bottom:0.4rem;"/>
+              <div style="display:flex; gap:0.4rem;">
+                <select id="new-acc-type" class="select-field" style="flex-grow:1;">
+                  <option value="checking" selected>Corrente</option>
+                  <option value="savings">Poupança</option>
+                  <option value="cash">Espécie (Carteira)</option>
+                  <option value="investment">Investimento</option>
+                </select>
+                <input type="number" step="0.01" id="new-acc-balance" class="input-field" placeholder="Saldo (R$)" style="max-width:90px;"/>
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:0.4rem;">
+                <button type="button" class="btn-submit" style="height:25px; background:rgba(255,255,255,0.05); border-color:var(--border);" onclick="toggleInlineForm('form-add-account')">CANCELAR</button>
+                <button type="button" class="btn-submit" style="height:25px;" onclick="submitNewAccount()">SALVAR</button>
+              </div>
+            </div>
+
+            <!-- Accounts List Container -->
+            <div id="side-accounts-list" style="display:flex; flex-direction:column; gap:0.4rem;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 2: Credit Cards -->
+          <div class="side-panel-section">
+            <div class="side-section-title display">
+              <span>💳 Cartões de Crédito</span>
+              <button class="delete-btn" onclick="toggleInlineForm('form-add-card')" title="Cadastrar novo cartão">+</button>
+            </div>
+            
+            <!-- Inline Form to Add Credit Card -->
+            <div id="form-add-card" class="inline-add-form" style="display:none;">
+              <span class="mono text-cyan" style="font-size:0.75rem;">+ NOVO CARTÃO</span>
+              <input type="text" id="new-card-name" class="input-field" placeholder="Nome (ex: Cartão BB, XP)" style="margin-bottom:0.4rem;"/>
+              <input type="number" step="0.01" id="new-card-limit" class="input-field" placeholder="Limite Total (R$)" style="margin-bottom:0.4rem;"/>
+              <div style="display:flex; gap:0.4rem;">
+                <input type="number" id="new-card-closing" class="input-field" placeholder="Dia Fechamento (1-31)"/>
+                <input type="number" id="new-card-due" class="input-field" placeholder="Dia Vencimento (1-31)"/>
+              </div>
+              <div style="display:flex; justify-content:flex-end; gap:0.4rem; margin-top:0.4rem;">
+                <button type="button" class="btn-submit" style="height:25px; background:rgba(255,255,255,0.05); border-color:var(--border);" onclick="toggleInlineForm('form-add-card')">CANCELAR</button>
+                <button type="button" class="btn-submit" style="height:25px;" onclick="submitNewCard()">SALVAR</button>
+              </div>
+            </div>
+
+            <!-- Cards List Container -->
+            <div id="side-cards-list" style="display:flex; flex-direction:column; gap:0.4rem;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Section 3: Categories stats breakdown -->
+          <div class="side-panel-section">
+            <div class="side-section-title display">
+              <span>📊 Despesas por Categoria</span>
+            </div>
+            
+            <div id="side-categories-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ── STATUS BAR ───────────────────────────────── -->
+  <footer class="statusbar">
+    <span class="mono">LUCAS_OS_FINANCIAL</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-cyan">POSTGRESQL_ONLINE</span>
+    <span class="statusbar-sep">|</span>
+    <span class="mono text-muted" id="sb-time">--:--</span>
+    <span class="statusbar-sep" style="margin-left:auto">|</span>
+    <span class="mono text-muted" id="sb-date">----</span>
+  </footer>
+
+  <!-- Frontend Logic -->
+  <script>
+    // Initialize Month input selector to current month
+    const monthInput = document.getElementById('finance-month');
+    const today = new Date();
+    const currentMonthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0');
+    monthInput.value = currentMonthStr;
+
+    // Set transaction date input default to today
+    const dateInput = document.getElementById('tx-date');
+    dateInput.value = today.toLocaleDateString('en-CA');
+
+    // Global arrays to store accounts/cards for dropdowns
+    let accountsList = [];
+    let cardsList = [];
+
+    // Format currency to BRL format
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+    }
+
+    // Toggle inline creation form visibility
+    function toggleInlineForm(formId) {
+      const form = document.getElementById(formId);
+      if (form.style.display === 'none') {
+        form.style.display = 'flex';
+      } else {
+        form.style.display = 'none';
+      }
+    }
+
+    // Toggle transaction form depending on Selected Type
+    function handleTypeChange() {
+      const type = document.getElementById('tx-type').value;
+      const originSelect = document.getElementById('tx-origin');
+      const destinationContainer = document.getElementById('tx-destination-container');
+      const destSelect = document.getElementById('tx-destination');
+      const categorySelect = document.getElementById('tx-category');
+      
+      originSelect.innerHTML = '';
+      destinationContainer.style.display = 'none';
+      destSelect.required = false;
+
+      if (type === 'expense') {
+        // Can be paid using either Bank Account (Debit/PIX) OR Credit Card
+        categorySelect.disabled = false;
+        
+        // Add checking accounts options
+        const groupAcc = document.createElement('optgroup');
+        groupAcc.label = '🏛️ Contas Correntes (PIX / Débito)';
+        accountsList.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = `account:${acc.id}`;
+          opt.textContent = `${acc.name} (${formatCurrency(acc.current_balance)})`;
+          groupAcc.appendChild(opt);
+        });
+        originSelect.appendChild(groupAcc);
+
+        // Add credit cards options
+        const groupCard = document.createElement('optgroup');
+        groupCard.label = '💳 Cartões de Crédito';
+        cardsList.forEach(card => {
+          const opt = document.createElement('option');
+          opt.value = `card:${card.id}`;
+          opt.textContent = `${card.name} (Lim. Disp: ${formatCurrency(card.available_limit)})`;
+          groupCard.appendChild(opt);
+        });
+        originSelect.appendChild(groupCard);
+        
+      } else if (type === 'income') {
+        // Can only go to a Bank Account
+        categorySelect.disabled = false;
+        if (categorySelect.value === 'Investimentos') {
+          categorySelect.value = 'Salário';
+        }
+        
+        accountsList.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = `account:${acc.id}`;
+          opt.textContent = `${acc.name} (${formatCurrency(acc.current_balance)})`;
+          originSelect.appendChild(opt);
+        });
+        
+      } else if (type === 'transfer') {
+        // Money moves from checking account to another checking account OR to pay a credit card invoice!
+        categorySelect.disabled = true; // category is not relevant for transfer
+        
+        // Source Account options (only checking accounts)
+        const groupSrc = document.createElement('optgroup');
+        groupSrc.label = '🏛️ Origem (De qual conta sai?)';
+        accountsList.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = `account:${acc.id}`;
+          opt.textContent = `${acc.name} (${formatCurrency(acc.current_balance)})`;
+          groupSrc.appendChild(opt);
+        });
+        originSelect.appendChild(groupSrc);
+
+        // Populate Destination Select
+        destSelect.innerHTML = '';
+        destSelect.required = true;
+        destinationContainer.style.display = 'grid';
+
+        // Destination option group 1: Checking accounts
+        const groupDestAcc = document.createElement('optgroup');
+        groupDestAcc.label = '🏛️ Para qual Conta Bancária enviar?';
+        accountsList.forEach(acc => {
+          const opt = document.createElement('option');
+          opt.value = `account:${acc.id}`;
+          opt.textContent = acc.name;
+          groupDestAcc.appendChild(opt);
+        });
+        destSelect.appendChild(groupDestAcc);
+
+        // Destination option group 2: Credit Card bill payments
+        const groupDestCard = document.createElement('optgroup');
+        groupDestCard.label = '💳 Pagar Fatura de qual Cartão?';
+        cardsList.forEach(card => {
+          const opt = document.createElement('option');
+          opt.value = `card:${card.id}`;
+          opt.textContent = `Pagar Fatura ${card.name} (${formatCurrency(card.cycle_invoice_total)})`;
+          groupDestCard.appendChild(opt);
+        });
+        destSelect.appendChild(groupDestCard);
+      }
+    }
+
+    // Load all financial data from the server
+    async function loadFinancialData() {
+      const selectedMonth = monthInput.value;
+      
+      // Update ledger title header
+      const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+      const [year, month] = selectedMonth.split('-');
+      document.getElementById('ledger-title-month').textContent = `MÊS: ${monthNames[parseInt(month)-1].toUpperCase()} / ${year}`;
+
+      try {
+        // 1. Fetch Summary Dashboard
+        const resSummary = await fetch(`/api/finance/summary?month=${selectedMonth}`);
+        if (!resSummary.ok) throw new Error('Falha ao carregar sumário');
+        const summary = await resSummary.json();
+        
+        document.getElementById('kpi-balance').textContent = formatCurrency(summary.total_accounts_balance);
+        document.getElementById('kpi-invoices').textContent = formatCurrency(summary.total_cards_outstanding);
+        document.getElementById('kpi-net').textContent = formatCurrency(summary.net_worth);
+        
+        // Handle negative Net Worth color coding
+        const netValueEl = document.getElementById('kpi-net');
+        if (summary.net_worth < 0) {
+          netValueEl.className = 'summary-card-value mono text-red';
+        } else {
+          netValueEl.className = 'summary-card-value mono text-cyan';
+        }
+
+        // 2. Fetch Accounts
+        const resAccounts = await fetch('/api/finance/accounts');
+        if (!resAccounts.ok) throw new Error('Falha ao carregar contas');
+        accountsList = await resAccounts.json();
+        renderAccounts();
+
+        // 3. Fetch Cards
+        const resCards = await fetch(`/api/finance/cards?cycle=${selectedMonth}`);
+        if (!resCards.ok) throw new Error('Falha ao carregar cartões');
+        cardsList = await resCards.json();
+        renderCards();
+
+        // 4. Update transaction composer dropdown selections
+        handleTypeChange();
+
+        // 5. Fetch and Render Transactions (Ledger)
+        const resTx = await fetch(`/api/finance/transactions?month=${selectedMonth}`);
+        if (!resTx.ok) throw new Error('Falha ao carregar transações');
+        const transactions = await resTx.json();
+        renderLedger(transactions);
+
+        // 6. Render Category Stats
+        renderCategoryBreakdown(summary.category_breakdown, summary.monthly_expenses);
+
+      } catch (err) {
+        console.error('Erro geral ao carregar dados financeiros:', err);
+      }
+    }
+
+    // Render Checking Accounts List
+    function renderAccounts() {
+      const container = document.getElementById('side-accounts-list');
+      container.innerHTML = '';
+      
+      accountsList.forEach(acc => {
+        const item = document.createElement('div');
+        item.className = 'item-card';
+        
+        let typeLabel = 'C. Corrente';
+        if (acc.type === 'savings') typeLabel = 'Poupança';
+        if (acc.type === 'cash') typeLabel = 'Dinheiro';
+        if (acc.type === 'investment') typeLabel = 'Investimento';
+        
+        item.innerHTML = `
+          <div class="item-details">
+            <span class="item-name">${acc.name}</span>
+            <span class="item-subtext">${typeLabel}</span>
+          </div>
+          <span class="item-balance ${acc.current_balance >= 0 ? 'text-green' : 'text-red'}">
+            ${formatCurrency(acc.current_balance)}
+          </span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Render Credit Cards List
+    function renderCards() {
+      const container = document.getElementById('side-cards-list');
+      container.innerHTML = '';
+      
+      cardsList.forEach(card => {
+        const item = document.createElement('div');
+        item.className = 'item-card';
+        
+        item.innerHTML = `
+          <div class="item-details">
+            <span class="item-name">${card.name}</span>
+            <span class="item-subtext">Fech: Dia ${card.closing_day} | Venc: Dia ${card.due_day}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
+            <span class="item-balance text-amber">${formatCurrency(card.cycle_invoice_total)}</span>
+            <span style="font-size:0.55rem; color:var(--text-muted);">Disp: ${formatCurrency(card.available_limit)}</span>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    // Render Category Expense Breakdown
+    function renderCategoryBreakdown(breakdown, totalExpenses) {
+      const container = document.getElementById('side-categories-list');
+      container.innerHTML = '';
+      
+      const entries = Object.entries(breakdown).sort((a,b) => b[1] - a[1]);
+      
+      if (entries.length === 0) {
+        container.innerHTML = '<span class="mono" style="font-size:0.7rem; color:var(--text-muted); font-style:italic;">Nenhuma despesa no mês</span>';
+        return;
+      }
+
+      entries.forEach(([category, amount]) => {
+        const percentage = totalExpenses > 0 ? Math.round((amount / totalExpenses) * 100) : 0;
+        
+        const row = document.createElement('div');
+        row.className = 'category-stat-row';
+        
+        row.innerHTML = `
+          <div class="category-stat-header">
+            <span style="font-weight:500;">${category}</span>
+            <span class="mono">${formatCurrency(amount)} <span style="color:var(--text-muted); font-size:0.7rem;">(${percentage}%)</span></span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${percentage}%;"></div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // Render Ledger (Transactions Table)
+    function renderLedger(transactions) {
+      const container = document.getElementById('ledger-list');
+      container.innerHTML = '';
+      
+      if (transactions.length === 0) {
+        container.innerHTML = `
+          <div class="empty-ledger">
+            Nenhum lançamento registrado neste ciclo de faturamento/calendário.
+          </div>
+        `;
+        return;
+      }
+
+      transactions.forEach(tx => {
+        const row = document.createElement('div');
+        row.className = 'tx-row';
+        
+        // Tags
+        let tagsHtml = `<span class="tx-tag tx-tag-cat">${tx.category}</span>`;
+        if (tx.is_transfer) {
+          if (tx.credit_card_id) {
+            tagsHtml = `<span class="tx-tag tx-tag-transfer">PAG_FATURA</span>`;
+            tagsHtml += `<span class="tx-tag tx-tag-account">${tx.account_name}</span>`;
+            tagsHtml += `<span class="tx-tag tx-tag-card">➔ ${tx.credit_card_name}</span>`;
+          } else {
+            tagsHtml = `<span class="tx-tag tx-tag-transfer">TRANSFERÊNCIA</span>`;
+            tagsHtml += `<span class="tx-tag tx-tag-account">${tx.account_name}</span>`;
+            tagsHtml += `<span class="tx-tag tx-tag-account">➔ ${tx.destination_account_name}</span>`;
+          }
+        } else {
+          if (tx.credit_card_id) {
+            tagsHtml += `<span class="tx-tag tx-tag-card">${tx.credit_card_name}</span>`;
+          } else {
+            tagsHtml += `<span class="tx-tag tx-tag-account">${tx.account_name}</span>`;
+          }
+        }
+
+        // Format amount styling
+        let amountText = '';
+        let amountClass = 'text-cyan';
+        if (tx.is_transfer) {
+          amountText = formatCurrency(Math.abs(tx.amount));
+          amountClass = 'text-blue';
+        } else {
+          if (tx.amount > 0) {
+            amountText = `+${formatCurrency(tx.amount)}`;
+            amountClass = 'text-green';
+          } else {
+            amountText = `-${formatCurrency(Math.abs(tx.amount))}`;
+            amountClass = 'text-red';
+          }
+        }
+
+        // Format Date (YYYY-MM-DD to DD/MM)
+        const dateParts = tx.date.split('-');
+        const formattedDate = `${dateParts[2]}/${dateParts[1]}`;
+
+        row.innerHTML = `
+          <div class="tx-row-left">
+            <span class="tx-desc">${escapeHtml(tx.description)}</span>
+            <div class="tx-meta-row">
+              <span class="mono text-muted" style="font-size:0.7rem; font-weight:bold; margin-right:0.3rem;">[${formattedDate}]</span>
+              ${tagsHtml}
+            </div>
+          </div>
+          <div class="tx-row-right">
+            <span class="tx-amount ${amountClass}">${amountText}</span>
+            <button class="delete-btn" onclick="deleteTransaction(${tx.id})" title="Excluir lançamento">🗑️</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // Submit New Transaction
+    async function handleAddTransaction(event) {
+      event.preventDefault();
+      
+      const date = document.getElementById('tx-date').value;
+      const description = document.getElementById('tx-description').value.trim();
+      const rawAmount = parseFloat(document.getElementById('tx-amount').value);
+      const type = document.getElementById('tx-type').value;
+      const category = document.getElementById('tx-category').value;
+      const originVal = document.getElementById('tx-origin').value;
+      
+      if (!date || !description || isNaN(rawAmount)) return;
+      
+      // Calculate signed amount
+      // Expenses are stored negative, incomes positive, transfers negative on origin
+      let amount = type === 'income' ? Math.abs(rawAmount) : -Math.abs(rawAmount);
+
+      const payload = {
+        date: date,
+        description: description,
+        amount: amount,
+        category: category
+      };
+
+      // Extract origin account or card
+      const [originType, originId] = originVal.split(':');
+      if (originType === 'account') {
+        payload.account_id = parseInt(originId);
+      } else if (originType === 'card') {
+        payload.credit_card_id = parseInt(originId);
+      }
+
+      // Extract destination on transfer
+      if (type === 'transfer') {
+        payload.is_transfer = true;
+        const destVal = document.getElementById('tx-destination').value;
+        const [destType, destId] = destVal.split(':');
+        
+        if (destType === 'account') {
+          payload.destination_account_id = parseInt(destId);
+        } else if (destType === 'card') {
+          payload.credit_card_id = parseInt(destId); // Credit Card bill payment
+        }
+      }
+
+      try {
+        const response = await fetch('/api/finance/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (response.ok) {
+          // Clear inputs
+          document.getElementById('tx-description').value = '';
+          document.getElementById('tx-amount').value = '';
+          
+          loadFinancialData();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao registrar transação: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao adicionar transação:', err);
+      }
+    }
+
+    // Delete a Transaction
+    async function deleteTransaction(txId) {
+      if (!confirm('Deseja realmente excluir este lançamento? Os saldos vinculados serão recalculados automaticamente.')) return;
+      
+      try {
+        const response = await fetch('/api/finance/transactions/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: txId })
+        });
+        
+        if (response.ok) {
+          loadFinancialData();
+        }
+      } catch (err) {
+        console.error('Erro ao excluir transação:', err);
+      }
+    }
+
+    // Submit New Bank Account
+    async function submitNewAccount() {
+      const name = document.getElementById('new-acc-name').value.trim();
+      const type = document.getElementById('new-acc-type').value;
+      const balance = parseFloat(document.getElementById('new-acc-balance').value) || 0.00;
+      
+      if (!name) {
+        alert('Por favor, informe o nome da conta bancária.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/finance/accounts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, type, initial_balance: balance })
+        });
+        if (response.ok) {
+          document.getElementById('new-acc-name').value = '';
+          document.getElementById('new-acc-balance').value = '';
+          toggleInlineForm('form-add-account');
+          loadFinancialData();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao cadastrar conta: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao salvar conta:', err);
+      }
+    }
+
+    // Submit New Credit Card
+    async function submitNewCard() {
+      const name = document.getElementById('new-card-name').value.trim();
+      const limit = parseFloat(document.getElementById('new-card-limit').value);
+      const closing = parseInt(document.getElementById('new-card-closing').value);
+      const due = parseInt(document.getElementById('new-card-due').value);
+      
+      if (!name || isNaN(limit) || isNaN(closing) || isNaN(due)) {
+        alert('Por favor, preencha todos os campos do cartão de crédito.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/finance/cards', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, credit_limit: limit, closing_day: closing, due_day: due })
+        });
+        if (response.ok) {
+          document.getElementById('new-card-name').value = '';
+          document.getElementById('new-card-limit').value = '';
+          document.getElementById('new-card-closing').value = '';
+          document.getElementById('new-card-due').value = '';
+          toggleInlineForm('form-add-card');
+          loadFinancialData();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao cadastrar cartão: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao salvar cartão:', err);
+      }
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Update status bar clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('sb-time').textContent = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sb-date').textContent = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+    }
+
+    // Initial setup
+    loadFinancialData();
+    updateClock();
+    setInterval(updateClock, 30000);
+  </script>
+</body>
+</html>

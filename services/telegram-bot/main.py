@@ -4,6 +4,7 @@ import json
 import re
 import threading
 from datetime import datetime
+from typing import Optional, Dict, List, Any
 import requests
 
 TOKEN = os.getenv("TELEGRAM_TOKEN", "").strip()
@@ -11,6 +12,255 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 TODO_SVC_URL = "http://todo-service:9005"
 TODO_APP_URL = os.getenv("TODO_APP_URL", "http://192.168.0.9:9999/todo").strip()
+FINANCE_SVC_URL = "http://finance-service:9006"
+
+def get_finance_summary_data(month_str: str) -> dict:
+    try:
+        r = requests.get(f"{FINANCE_SVC_URL}/api/finance/summary?month={month_str}", timeout=5)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        print(f"[Telegram Bot] Error fetching finance summary: {e}")
+    return {}
+
+def format_currency_brl(val: float) -> str:
+    return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def send_finance_summary_telegram():
+    today_str = datetime.now().strftime("%Y-%m")
+    summary = get_finance_summary_data(today_str)
+    if not summary:
+        send_message("⚠️ Não foi possível obter o resumo financeiro de hoje.")
+        return
+        
+    text = (
+        f"💰 <b>Painel Financeiro - Lucas_OS</b>\n"
+        f"Referência: <b>{today_str}</b>\n\n"
+        f"🏛️ Saldo em Contas: <b>{format_currency_brl(summary.get('total_accounts_balance', 0.0))}</b>\n"
+        f"💳 Faturas de Cartão: <b>{format_currency_brl(summary.get('total_cards_outstanding', 0.0))}</b>\n"
+        f"📊 Patrimônio Líquido: <b>{format_currency_brl(summary.get('net_worth', 0.0))}</b>\n\n"
+        f"📈 Receitas no Mês: <b>{format_currency_brl(summary.get('monthly_income', 0.0))}</b>\n"
+        f"📉 Despesas no Mês: <b>{format_currency_brl(summary.get('monthly_expenses', 0.0))}</b>\n"
+        f"⚖️ Saldo Líquido Mensal: <b>{format_currency_brl(summary.get('net_monthly_savings', 0.0))}</b>\n"
+    )
+    
+    breakdown = summary.get("category_breakdown", {})
+    if breakdown:
+        text += "\n<b>Despesas por Categoria:</b>\n"
+        sorted_breakdown = sorted(breakdown.items(), key=lambda x: x[1], reverse=True)
+        for cat, val in sorted_breakdown:
+            text += f" • {cat}: {format_currency_brl(val)}\n"
+            
+    finance_web_url = TODO_APP_URL.replace("/todo", "/finance")
+    text += f"\n🔗 <a href='{finance_web_url}'>Acessar Web App Financeiro</a>"
+    
+    markup = {
+        "inline_keyboard": [
+            [{"text": "🔗 Abrir Web App Financeiro", "url": finance_web_url}]
+        ]
+    }
+    send_message(text, markup)
+
+def resolve_account_or_card(name: str) -> Optional[dict]:
+    try:
+        r = requests.get(f"{FINANCE_SVC_URL}/api/finance/accounts", timeout=3)
+        if r.status_code == 200:
+            for acc in r.json():
+                if name.lower() in acc["name"].lower():
+                    return {"type": "account", "id": acc["id"], "name": acc["name"]}
+    except Exception as e:
+        print(f"Error resolving account: {e}")
+        
+    try:
+        r = requests.get(f"{FINANCE_SVC_URL}/api/finance/cards", timeout=3)
+        if r.status_code == 200:
+            for card in r.json():
+                if name.lower() in card["name"].lower():
+                    return {"type": "card", "id": card["id"], "name": card["name"]}
+    except Exception as e:
+        print(f"Error resolving card: {e}")
+        
+    return None
+
+def handle_quick_gasto(text: str):
+    parts = text.split(maxsplit=4)
+    if len(parts) < 5:
+        help_text = (
+            "⚠️ <b>Uso incorreto do comando /gasto</b>\n\n"
+            "Formato correto:\n"
+            "<code>/gasto &lt;valor&gt; &lt;categoria&gt; &lt;conta/cartão&gt; &lt;descrição&gt;</code>\n\n"
+            "Exemplos:\n"
+            "• <code>/gasto 35.50 Alimentação Nubank Almoço</code>\n"
+            "• <code>/gasto 120.00 Lazer Cartao_Nubank Cinema</code>"
+        )
+        send_message(help_text)
+        return
+        
+    val_str = parts[1].replace(",", ".")
+    category = parts[2]
+    source_name = parts[3].replace("_", " ")
+    description = parts[4]
+    
+    try:
+        amount = -abs(float(val_str))
+    except ValueError:
+        send_message("⚠️ Valor inválido. Use números no formato 12.34")
+        return
+        
+    resolved = resolve_account_or_card(source_name)
+    if not resolved:
+        send_message(f"⚠️ Não encontrei nenhuma Conta ou Cartão que combine com '<b>{source_name}</b>'.")
+        return
+        
+    payload = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "description": description,
+        "amount": amount,
+        "category": category
+    }
+    
+    if resolved["type"] == "account":
+        payload["account_id"] = resolved["id"]
+        source_label = f"🏛️ Conta {resolved['name']}"
+    else:
+        payload["credit_card_id"] = resolved["id"]
+        source_label = f"💳 Cartão {resolved['name']}"
+        
+    try:
+        r = requests.post(f"{FINANCE_SVC_URL}/api/finance/transactions", json=payload, timeout=5)
+        if r.status_code == 200:
+            send_message(
+                f"✅ <b>Despesa registrada com sucesso!</b>\n\n"
+                f"📝 Descrição: {description}\n"
+                f"💰 Valor: <b>{format_currency_brl(abs(amount))}</b>\n"
+                f"🏷️ Categoria: {category}\n"
+                f"💳 Origem: {source_label}"
+            )
+        else:
+            err = r.json().get("detail", "Erro desconhecido")
+            send_message(f"⚠️ Erro ao registrar no backend: {err}")
+    except Exception as e:
+        send_message(f"⚠️ Erro ao conectar ao finance-service: {e}")
+
+def handle_quick_receita(text: str):
+    parts = text.split(maxsplit=4)
+    if len(parts) < 5:
+        help_text = (
+            "⚠️ <b>Uso incorreto do comando /receita</b>\n\n"
+            "Formato correto:\n"
+            "<code>/receita &lt;valor&gt; &lt;categoria&gt; &lt;conta&gt; &lt;descrição&gt;</code>\n\n"
+            "Exemplo:\n"
+            "• <code>/receita 5000.00 Salário Nubank Salário Mensal</code>"
+        )
+        send_message(help_text)
+        return
+        
+    val_str = parts[1].replace(",", ".")
+    category = parts[2]
+    source_name = parts[3].replace("_", " ")
+    description = parts[4]
+    
+    try:
+        amount = abs(float(val_str))
+    except ValueError:
+        send_message("⚠️ Valor inválido. Use números no formato 12.34")
+        return
+        
+    resolved = resolve_account_or_card(source_name)
+    if not resolved or resolved["type"] != "account":
+        send_message(f"⚠️ Não encontrei nenhuma Conta Bancária que combine com '<b>{source_name}</b>'.")
+        return
+        
+    payload = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "description": description,
+        "amount": amount,
+        "category": category,
+        "account_id": resolved["id"]
+    }
+        
+    try:
+        r = requests.post(f"{FINANCE_SVC_URL}/api/finance/transactions", json=payload, timeout=5)
+        if r.status_code == 200:
+            send_message(
+                f"✅ <b>Receita registrada com sucesso!</b>\n\n"
+                f"📝 Descrição: {description}\n"
+                f"💰 Valor: <b>{format_currency_brl(amount)}</b>\n"
+                f"🏷️ Categoria: {category}\n"
+                f"🏛️ Destino: Conta {resolved['name']}"
+            )
+        else:
+            err = r.json().get("detail", "Erro desconhecido")
+            send_message(f"⚠️ Erro ao registrar no backend: {err}")
+    except Exception as e:
+        send_message(f"⚠️ Erro ao conectar ao finance-service: {e}")
+
+def handle_quick_transferencia(text: str):
+    parts = text.split(maxsplit=4)
+    if len(parts) < 5:
+        help_text = (
+            "⚠️ <b>Uso incorreto do comando /transferencia</b>\n\n"
+            "Formato correto:\n"
+            "<code>/transferencia &lt;valor&gt; &lt;conta_origem&gt; &lt;destino&gt; &lt;descrição&gt;</code>\n\n"
+            "Exemplos:\n"
+            "• <code>/transferencia 200 Nubank Poupança Guardar dinheiro</code>\n"
+            "• <code>/transferencia 1000 Nubank Cartão_Nubank Pagar fatura</code>"
+        )
+        send_message(help_text)
+        return
+        
+    val_str = parts[1].replace(",", ".")
+    src_name = parts[2].replace("_", " ")
+    dest_name = parts[3].replace("_", " ")
+    description = parts[4]
+    
+    try:
+        amount = -abs(float(val_str))
+    except ValueError:
+        send_message("⚠️ Valor inválido. Use números no formato 12.34")
+        return
+        
+    src_resolved = resolve_account_or_card(src_name)
+    if not src_resolved or src_resolved["type"] != "account":
+        send_message(f"⚠️ Não encontrei conta de origem que combine com '<b>{src_name}</b>'.")
+        return
+        
+    dest_resolved = resolve_account_or_card(dest_name)
+    if not dest_resolved:
+        send_message(f"⚠️ Não encontrei conta ou cartão de destino que combine com '<b>{dest_name}</b>'.")
+        return
+        
+    payload = {
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "description": description,
+        "amount": amount,
+        "category": "Outros",
+        "account_id": src_resolved["id"],
+        "is_transfer": True
+    }
+    
+    if dest_resolved["type"] == "account":
+        payload["destination_account_id"] = dest_resolved["id"]
+        dest_label = f"🏛️ Conta {dest_resolved['name']}"
+    else:
+        payload["credit_card_id"] = dest_resolved["id"]
+        dest_label = f"💳 Fatura Cartão {dest_resolved['name']}"
+        
+    try:
+        r = requests.post(f"{FINANCE_SVC_URL}/api/finance/transactions", json=payload, timeout=5)
+        if r.status_code == 200:
+            send_message(
+                f"✅ <b>Transferência registrada com sucesso!</b>\n\n"
+                f"📝 Descrição: {description}\n"
+                f"💰 Valor: <b>{format_currency_brl(abs(amount))}</b>\n"
+                f"🏛️ Origem: Conta {src_resolved['name']}\n"
+                f"🏁 Destino: {dest_label}"
+            )
+        else:
+            err = r.json().get("detail", "Erro desconhecido")
+            send_message(f"⚠️ Erro ao registrar no backend: {err}")
+    except Exception as e:
+        send_message(f"⚠️ Erro ao conectar ao finance-service: {e}")
 
 # ─── API Helpers ──────────────────────────────────────────────────────────────
 
@@ -227,14 +477,19 @@ def send_general_summary_message(is_final: bool = False):
 def handle_start():
     welcome_text = (
         "☸️ <b>Bem-vindo ao Lucas_OS Telegram Bot!</b>\n\n"
-        "Comandos disponíveis:\n"
+        "Comandos de Checklist:\n"
         "🧹 /rotina - Inicia o checklist de tarefas domésticas.\n"
         "🖥️ /trabalho - Inicia o checklist de tarefas de trabalho SRE.\n"
         "📚 /estudos - Inicia o checklist de tarefas de estudos.\n"
         "❤️ /saude - Inicia o checklist de tarefas de saúde.\n"
         "💰 /financas - Inicia o checklist de tarefas de finanças.\n"
         "📊 /resumo - Exibe o progresso geral e resumo de tarefas de hoje.\n"
-        "⏰ /lembretes - Exibe as opções de rotinas e lembretes."
+        "⏰ /lembretes - Exibe as opções de rotinas e lembretes.\n\n"
+        "Comandos Financeiros:\n"
+        "💰 /financeiro ou /saldo - Exibe saldos, faturas e patrimônio líquido.\n"
+        "📥 /receita [valor] [categoria] [conta] [descrição] - Registra ganhos.\n"
+        "📤 /gasto [valor] [categoria] [origem] [descrição] - Registra despesas.\n"
+        "🔄 /transferencia [valor] [origem] [destino] [descrição] - Transferências e Faturas."
     )
     send_message(welcome_text)
 
@@ -350,6 +605,14 @@ def main():
                             
                         if text == "/start" or text == "/help":
                             handle_start()
+                        elif text == "/financeiro" or text == "/saldo":
+                            send_finance_summary_telegram()
+                        elif text.startswith("/gasto"):
+                            handle_quick_gasto(text)
+                        elif text.startswith("/receita"):
+                            handle_quick_receita(text)
+                        elif text.startswith("/transferencia"):
+                            handle_quick_transferencia(text)
                         elif text == "/rotina":
                             send_domestic_routine_message()
                         elif text == "/trabalho":

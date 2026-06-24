@@ -65,6 +65,24 @@ services:
     networks:
       - task-life-network
 
+  finance-service:
+    build:
+      context: ./services/finance-service
+      dockerfile: Dockerfile
+    container_name: lucas-task-life-finance-service
+    ports:
+      - "9006:9006"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=lucas_todo
+      - POSTGRES_USER=lucas_user
+      - POSTGRES_PASSWORD=lucas_password
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - postgres
+    networks:
+      - task-life-network
+
   postgres:
     image: postgres:16-alpine
     container_name: lucas-task-life-postgres
