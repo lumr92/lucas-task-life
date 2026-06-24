@@ -190,6 +190,25 @@ def add_account(payload: Dict[str, Any] = Body(...)):
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/finance/accounts/delete")
+def delete_account(payload: Dict[str, Any] = Body(...)):
+    acc_id = payload.get("id")
+    if acc_id is None:
+        raise HTTPException(status_code=400, detail="Missing account id")
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM accounts WHERE id = %s", (acc_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ─── Credit Cards API ─────────────────────────────────────────────────────────
 
 @app.get("/api/finance/cards")
@@ -273,6 +292,25 @@ def add_card(payload: Dict[str, Any] = Body(...)):
         cursor.close()
         conn.close()
         return {"status": "success", "card": new_card}
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/finance/cards/delete")
+def delete_card(payload: Dict[str, Any] = Body(...)):
+    card_id = payload.get("id")
+    if card_id is None:
+        raise HTTPException(status_code=400, detail="Missing card id")
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM credit_cards WHERE id = %s", (card_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"status": "success"}
     except Exception as e:
         cursor.close()
         conn.close()

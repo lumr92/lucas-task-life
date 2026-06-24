@@ -1035,9 +1035,12 @@
             <span class="item-name">${acc.name}</span>
             <span class="item-subtext">${typeLabel}</span>
           </div>
-          <span class="item-balance ${acc.current_balance >= 0 ? 'text-green' : 'text-red'}">
-            ${formatCurrency(acc.current_balance)}
-          </span>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span class="item-balance ${acc.current_balance >= 0 ? 'text-green' : 'text-red'}">
+              ${formatCurrency(acc.current_balance)}
+            </span>
+            <button class="delete-btn" style="font-size:0.8rem; padding:0.1rem;" onclick="deleteAccount(${acc.id}, '${acc.name}')" title="Excluir conta">🗑️</button>
+          </div>
         `;
         container.appendChild(item);
       });
@@ -1057,9 +1060,12 @@
             <span class="item-name">${card.name}</span>
             <span class="item-subtext">Fech: Dia ${card.closing_day} | Venc: Dia ${card.due_day}</span>
           </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
-            <span class="item-balance text-amber">${formatCurrency(card.cycle_invoice_total)}</span>
-            <span style="font-size:0.55rem; color:var(--text-muted);">Disp: ${formatCurrency(card.available_limit)}</span>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.1rem;">
+              <span class="item-balance text-amber">${formatCurrency(card.cycle_invoice_total)}</span>
+              <span style="font-size:0.55rem; color:var(--text-muted);">Disp: ${formatCurrency(card.available_limit)}</span>
+            </div>
+            <button class="delete-btn" style="font-size:0.8rem; padding:0.1rem;" onclick="deleteCard(${card.id}, '${card.name}')" title="Excluir cartão">🗑️</button>
           </div>
         `;
         container.appendChild(item);
@@ -1255,6 +1261,50 @@
         }
       } catch (err) {
         console.error('Erro ao excluir transação:', err);
+      }
+    }
+
+    // Delete a Bank Account
+    async function deleteAccount(accId, accName) {
+      if (!confirm(`Deseja realmente excluir a conta "${accName}"? As transações vinculadas a ela perderão o vínculo (mas não serão excluídas).`)) return;
+      
+      try {
+        const response = await fetch('/api/finance/accounts/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: accId })
+        });
+        
+        if (response.ok) {
+          loadFinancialData();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao excluir conta: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao excluir conta:', err);
+      }
+    }
+
+    // Delete a Credit Card
+    async function deleteCard(cardId, cardName) {
+      if (!confirm(`Deseja realmente excluir o cartão "${cardName}"? As transações vinculadas a ele perderão o vínculo (mas não serão excluídas).`)) return;
+      
+      try {
+        const response = await fetch('/api/finance/cards/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: cardId })
+        });
+        
+        if (response.ok) {
+          loadFinancialData();
+        } else {
+          const errData = await response.json();
+          alert('Erro ao excluir cartão: ' + (errData.detail || 'Erro desconhecido'));
+        }
+      } catch (err) {
+        console.error('Erro ao excluir cartão:', err);
       }
     }
 
