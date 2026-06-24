@@ -177,7 +177,7 @@ def add_account(payload: Dict[str, Any] = Body(...)):
     try:
         cursor.execute(
             "INSERT INTO accounts (name, type, initial_balance) VALUES (%s, %s, %s) "
-            "ON CONFLICT (name) DO UPDATE SET type=EXCLUDED.type RETURNING id, name, type, initial_balance",
+            "ON CONFLICT (name) DO UPDATE SET type=EXCLUDED.type, initial_balance=EXCLUDED.initial_balance RETURNING id, name, type, initial_balance",
             (name, type_, initial_balance)
         )
         new_acc = cursor.fetchone()
@@ -265,7 +265,7 @@ def add_card(payload: Dict[str, Any] = Body(...)):
     try:
         cursor.execute(
             "INSERT INTO credit_cards (name, credit_limit, closing_day, due_day) VALUES (%s, %s, %s, %s) "
-            "ON CONFLICT (name) DO UPDATE SET credit_limit=EXCLUDED.credit_limit RETURNING id, name, credit_limit, closing_day, due_day",
+            "ON CONFLICT (name) DO UPDATE SET credit_limit=EXCLUDED.credit_limit, closing_day=EXCLUDED.closing_day, due_day=EXCLUDED.due_day RETURNING id, name, credit_limit, closing_day, due_day",
             (name, credit_limit, closing_day, due_day)
         )
         new_card = cursor.fetchone()
