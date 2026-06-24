@@ -71,7 +71,7 @@ services:
       dockerfile: Dockerfile
     container_name: lucas-task-life-finance-service
     ports:
-      - "127.0.0.1:9006:9006"
+      - "9006:9006"
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_DB=lucas_todo
