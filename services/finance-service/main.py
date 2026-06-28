@@ -407,7 +407,13 @@ def add_transaction(payload: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="Missing required transaction parameters")
     
     try:
-        t_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        # Normalize date format (pad single digit month/day with leading zeros)
+        parts = date_str.split('-')
+        if len(parts) == 3:
+            normalized_date_str = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+        else:
+            normalized_date_str = date_str
+        t_date = datetime.strptime(normalized_date_str, "%Y-%m-%d").date()
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format (must be YYYY-MM-DD)")
         
