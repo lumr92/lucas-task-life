@@ -172,7 +172,11 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
         
         # 4. Parse CSV
         f = io.StringIO(csv_content)
-        reader = csv.reader(f)
+        first_line = f.readline()
+        delimiter = ';' if ';' in first_line else ','
+        
+        f.seek(0)
+        reader = csv.reader(f, delimiter=delimiter)
         
         # Read header row
         try:
