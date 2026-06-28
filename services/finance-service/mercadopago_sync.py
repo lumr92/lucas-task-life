@@ -46,6 +46,10 @@ def map_headers(headers):
         # Gross matches (as fallback)
         elif h_upper in ['GROSS_AMOUNT', 'VALOR_BRUTO', 'AMOUNT', 'VALOR']:
             mapping['gross'] = idx
+        elif h_upper in ['PAYMENT_METHOD', 'MEIO_PAGAMENTO', 'METODO_PAGAMENTO']:
+            mapping['payment_method'] = idx
+        elif h_upper in ['PAYMENT_METHOD_TYPE', 'TIPO_PAGAMENTO', 'PAYMENT_TYPE']:
+            mapping['payment_type'] = idx
     return mapping
 
 # Global status tracker for the background task
@@ -205,7 +209,40 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
                 # Check description
                 desc = "Mercado Pago Transação"
                 if 'description' in mapping:
-                    desc = row[mapping['description']].strip()
+                    desc_raw = row[mapping['description']].strip().lower()
+                    
+                    # Translations dictionary
+                    translations = {
+                        "payment": "Pagamento Recebido",
+                        "reserve_for_payout": "Transferência / Pix Enviado",
+                        "withdrawal": "Retirada de Saldo",
+                        "payout": "Retirada Concluída",
+                        "transfer": "Transferência",
+                        "refund": "Reembolso",
+                        "chargeback": "Contestação (Chargeback)",
+                        "fee": "Tarifa Mercado Pago",
+                        "payout_fee": "Tarifa de Saque",
+                        "released_money": "Saldo Liberado",
+                        "reserve_release": "Reserva Liberada",
+                        "asset_management": "Rendimento Diário (CDI)"
+                    }
+                    
+                    desc = translations.get(desc_raw, row[mapping['description']].strip())
+                    
+                # Append payment method if available
+                method_info = []
+                if 'payment_method' in mapping and row[mapping['payment_method']].strip():
+                    m = row[mapping['payment_method']].strip().upper()
+                    if m == 'ACCOUNT_MONEY':
+                        m = 'Saldo MP'
+                    method_info.append(m)
+                if 'payment_type' in mapping and row[mapping['payment_type']].strip():
+                    t = row[mapping['payment_type']].strip().upper()
+                    if not method_info or t != method_info[0]:
+                        method_info.append(t)
+                        
+                if method_info:
+                    desc += f" ({' - '.join(method_info)})"
                     
                 # Calculate amount
                 credit = 0.0
