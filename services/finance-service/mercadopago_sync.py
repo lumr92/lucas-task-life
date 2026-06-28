@@ -152,7 +152,7 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
             status = str(target_report.get("status", "")).lower()
             print(f"[MP Sync] Attempt {attempt+1}: Target report ID: {target_report.get('id')}, Status is '{status}'", flush=True)
             
-            if status in ["processed", "available", "file_generated", "success"]:
+            if status in ["enabled", "processed", "available", "file_generated", "success"]:
                 file_name = target_report.get("file_name")
                 if file_name:
                     break
