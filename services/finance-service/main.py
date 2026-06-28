@@ -104,22 +104,7 @@ def init_db():
     except Exception as e:
         conn.rollback()
     
-    # Seed default accounts if empty
-    cursor.execute("SELECT COUNT(*) FROM accounts")
-    acc_count = cursor.fetchone()[0]
-    if acc_count == 0:
-        cursor.execute("INSERT INTO accounts (name, type, initial_balance) VALUES ('Carteira (Dinheiro)', 'cash', 0.00)")
-        cursor.execute("INSERT INTO accounts (name, type, initial_balance) VALUES ('Nubank Corrente', 'checking', 0.00)")
-        cursor.execute("INSERT INTO accounts (name, type, initial_balance) VALUES ('Poupança', 'savings', 0.00)")
-        conn.commit()
-        
-    # Seed default credit cards if empty
-    cursor.execute("SELECT COUNT(*) FROM credit_cards")
-    card_count = cursor.fetchone()[0]
-    if card_count == 0:
-        cursor.execute("INSERT INTO credit_cards (name, credit_limit, closing_day, due_day) VALUES ('Cartão Nubank', 3000.00, 10, 15)")
-        conn.commit()
-        
+    # Database schema checks complete. Seeding disabled to allow user to manage their own accounts/cards.
     cursor.close()
     conn.close()
     print("[Finance Service] Database initialized successfully.")
