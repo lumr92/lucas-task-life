@@ -262,6 +262,79 @@ def handle_quick_transferencia(text: str):
     except Exception as e:
         send_message(f"⚠️ Erro ao conectar ao finance-service: {e}")
 
+def parse_and_register_notification(text: str) -> bool:
+    text_lower = text.lower()
+    account_id = None
+    account_name = ""
+    
+    # 1. Detect account
+    if "bb " in text_lower or "banco do brasil" in text_lower or "bb:" in text_lower or text_lower.startswith("bb"):
+        account_id = 4
+        account_name = "BB"
+    elif "mercado pago" in text_lower or "mercadopago" in text_lower:
+        account_id = 5
+        account_name = "Mercado Pago"
+    else:
+        # Default to BB if it contains typical transaction keywords
+        if any(kw in text_lower for kw in ["pix", "enviou", "recebeu", "transferência", "saída", "entrada"]):
+            account_id = 4
+            account_name = "BB"
+        else:
+            return False
+
+    # 2. Detect direction (inflow vs outflow)
+    is_outflow = True
+    if any(kw in text_lower for kw in ["entrada", "recebido", "recebeu", "credito", "recebimento"]):
+        is_outflow = False
+
+    # 3. Extract amount using regex
+    match = re.search(r'([0-9\.]+),[0-9]{2}', text)
+    if not match:
+        return False
+        
+    amount_str = match.group(0).replace('.', '').replace(',', '.')
+    try:
+        amount = float(amount_str)
+    except ValueError:
+        return False
+        
+    if is_outflow:
+        amount = -abs(amount)
+    else:
+        amount = abs(amount)
+
+    # 4. Register transaction
+    payload = {
+        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "description": text,
+        "amount": amount,
+        "category": "Outros",
+        "account_id": account_id
+    }
+    
+    try:
+        r = requests.post(f"{FINANCE_SVC_URL}/api/finance/transactions", json=payload, timeout=5)
+        if r.status_code in [200, 201]:
+            direction_label = "Despesa" if amount < 0 else "Receita"
+            val_formatted = format_currency_brl(abs(amount))
+            send_message(
+                f"✅ <b>Lançamento Automático Realizado!</b>\n\n"
+                f"🏛️ Conta: <b>{account_name}</b>\n"
+                f"🏷️ Tipo: <b>{direction_label}</b>\n"
+                f"💰 Valor: <b>{val_formatted}</b>\n"
+                f"📝 Descrição: <i>{text}</i>"
+            )
+            return True
+        else:
+            err_msg = r.json().get("detail", "Erro desconhecido") if r.status_code == 400 else r.text
+            send_message(f"⚠️ Erro ao registrar transação: {err_msg}")
+            return True
+    except Exception as e:
+        send_message(f"⚠️ Erro de conexão ao salvar transação: {e}")
+        return True
+
+    return False
+
 # ─── API Helpers ──────────────────────────────────────────────────────────────
 
 def send_telegram(method: str, payload: dict) -> dict:
@@ -637,6 +710,18 @@ def main():
                                 "📊 /resumo - Resumo Geral de Hoje"
                             )
                             send_message(welcome_text)
+                        elif text.startswith("/"):
+                            send_message("⚠️ Comando não reconhecido. Use /help para ver os comandos disponíveis.")
+                        elif text:
+                            # Plain text: try to parse as bank notification/receipt
+                            is_parsed = parse_and_register_notification(text)
+                            if not is_parsed:
+                                send_message(
+                                    "⚠️ <b>Mensagem não interpretada como transação</b>\n\n"
+                                    "Para fazer um lançamento rápido via texto, envie uma notificação de banco contendo valores (ex: <i>'BB Saída: Pix de R$ 10,00...'</i>) ou use os comandos:\n"
+                                    "• <code>/gasto &lt;valor&gt; &lt;categoria&gt; &lt;conta&gt; &lt;descrição&gt;</code>\n"
+                                    "• <code>/receita &lt;valor&gt; &lt;categoria&gt; &lt;conta&gt; &lt;descrição&gt;</code>"
+                                )
                             
                     elif "callback_query" in update:
                         cb = update["callback_query"]
