@@ -105,9 +105,10 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
             
         print(f"[MP Sync] Report request accepted. Report ID: {report_id}. Waiting for completion...", flush=True)
         
-        # Poll for 30 seconds max
-        for attempt in range(15):
-            time.sleep(2)
+        # Poll for 2 minutes max (40 attempts, 3s sleep)
+        file_name = None
+        for attempt in range(40):
+            time.sleep(3)
             list_resp = requests.get(
                 "https://api.mercadopago.com/v1/account/release_report/list",
                 headers=headers,
@@ -118,6 +119,8 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
                 continue
                 
             reports = list_resp.json()
+            print(f"[MP Sync] Attempt {attempt+1}: Received reports list: {reports}", flush=True)
+            
             if not isinstance(reports, list):
                 if isinstance(reports, dict) and "results" in reports:
                     reports = reports["results"]
@@ -127,8 +130,12 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
             if not reports:
                 continue
                 
-            # Sort reports by date_created desc to get the newest first
-            reports_sorted = sorted(reports, key=lambda x: x.get("date_created", ""), reverse=True)
+            # Sort reports by generation_date desc to get the newest first
+            try:
+                reports_sorted = sorted(reports, key=lambda x: x.get("generation_date", x.get("date_created", "")), reverse=True)
+            except:
+                reports_sorted = reports
+                
             newest_report = reports_sorted[0]
             
             # If we have a specific report_id, find it; otherwise take the newest completed report
@@ -142,22 +149,24 @@ def sync_mercado_pago_task(access_token: str, account_id: int):
             if not target_report:
                 target_report = newest_report
                 
-            status = target_report.get("status", "").lower()
-            print(f"[MP Sync] Attempt {attempt+1}: Report status is '{status}'", flush=True)
+            status = str(target_report.get("status", "")).lower()
+            print(f"[MP Sync] Attempt {attempt+1}: Target report ID: {target_report.get('id')}, Status is '{status}'", flush=True)
             
-            if status in ["available", "file_generated", "success"] or target_report.get("download_url"):
-                download_url = target_report.get("download_url")
-                break
+            if status in ["processed", "available", "file_generated", "success"]:
+                file_name = target_report.get("file_name")
+                if file_name:
+                    break
                 
-        if not download_url:
+        if not file_name:
             raise Exception("Timeout waiting for Mercado Pago report generation. Please try again in a few moments.")
             
-        print(f"[MP Sync] Report ready! Downloading from: {download_url}", flush=True)
+        download_url = f"https://api.mercadopago.com/v1/account/release_report/{file_name}"
+        print(f"[MP Sync] Report ready! Downloading file '{file_name}' from: {download_url}", flush=True)
         
         # 3. Download CSV
-        csv_resp = requests.get(download_url, timeout=30)
+        csv_resp = requests.get(download_url, headers=headers, timeout=30)
         if csv_resp.status_code != 200:
-            raise Exception(f"Failed to download report file from Mercado Pago. HTTP {csv_resp.status_code}")
+            raise Exception(f"Failed to download report file '{file_name}' from Mercado Pago. HTTP {csv_resp.status_code}: {csv_resp.text}")
             
         csv_content = csv_resp.text
         
