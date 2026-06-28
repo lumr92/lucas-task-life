@@ -4,10 +4,20 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.responses import HTMLResponse
 
 app = FastAPI(title="Lucas_OS Finance Service", version="1.0.0")
+
+@app.middleware("http")
+async def log_request_body(request: Request, call_next):
+    if request.url.path == "/api/finance/transactions" and request.method == "POST":
+        try:
+            body = await request.body()
+            print(f"[Finance Service Debug] Raw Request Body: {body.decode('utf-8', errors='ignore')}", flush=True)
+        except Exception as e:
+            print(f"[Finance Service Debug] Failed to read request body: {e}", flush=True)
+    return await call_next(request)
 
 # Database configuration from environment variables
 DB_HOST = os.getenv("POSTGRES_HOST", "postgres")
@@ -394,6 +404,7 @@ def get_transactions(month: Optional[str] = None, account_id: Optional[int] = No
 
 @app.post("/api/finance/transactions")
 def add_transaction(payload: Dict[str, Any] = Body(...)):
+    print(f"[Finance Service Debug] Received payload: {payload}", flush=True)
     date_str = payload.get("date")
     description = payload.get("description")
     amount = payload.get("amount") # Float, positive for income, negative for expense
@@ -404,6 +415,7 @@ def add_transaction(payload: Dict[str, Any] = Body(...)):
     destination_account_id = payload.get("destination_account_id")
     
     if not date_str or not description or amount is None:
+        print(f"[Finance Service Debug] Validation failed: missing parameters. date={date_str}, description={description}, amount={amount}", flush=True)
         raise HTTPException(status_code=400, detail="Missing required transaction parameters")
     
     try:
@@ -414,8 +426,9 @@ def add_transaction(payload: Dict[str, Any] = Body(...)):
         else:
             normalized_date_str = date_str
         t_date = datetime.strptime(normalized_date_str, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format (must be YYYY-MM-DD)")
+    except ValueError as ve:
+        print(f"[Finance Service Debug] Date parsing failed: {ve} for date_str='{date_str}'", flush=True)
+        raise HTTPException(status_code=400, detail=f"Invalid date format (must be YYYY-MM-DD): {ve}")
         
     # Validation of fields
     if not credit_card_id and not account_id:
