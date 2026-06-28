@@ -1030,15 +1030,23 @@
         if (acc.type === 'cash') typeLabel = 'Dinheiro';
         if (acc.type === 'investment') typeLabel = 'Investimento';
         
+        let syncBtnHtml = '';
+        if (acc.name.toLowerCase().includes('mercado pago') || acc.name.toLowerCase().includes('mercadopago')) {
+          syncBtnHtml = `
+            <button class="delete-btn" style="font-size:0.85rem; padding:0.15rem; color:#4facfe; margin-right:0.1rem;" onclick="syncMercadoPago(${acc.id})" title="Sincronizar Mercado Pago">🔄</button>
+          `;
+        }
+
         item.innerHTML = `
           <div class="item-details">
             <span class="item-name">${acc.name}</span>
             <span class="item-subtext">${typeLabel}</span>
           </div>
-          <div style="display:flex; align-items:center; gap:0.5rem;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
             <span class="item-balance ${acc.current_balance >= 0 ? 'text-green' : 'text-red'}">
               ${formatCurrency(acc.current_balance)}
             </span>
+            ${syncBtnHtml}
             <button class="delete-btn" style="font-size:0.8rem; padding:0.1rem;" onclick="deleteAccount(${acc.id}, '${acc.name}')" title="Excluir conta">🗑️</button>
           </div>
         `;
@@ -1298,6 +1306,59 @@
       } catch (err) {
         console.error('Erro ao excluir conta:', err);
       }
+    }
+
+    let mpSyncing = false;
+    async function syncMercadoPago(accountId) {
+      if (mpSyncing) return;
+      mpSyncing = true;
+      
+      alert('Sincronização com o Mercado Pago iniciada em segundo plano. Isso pode levar alguns segundos...');
+      
+      try {
+        const response = await fetch('/api/finance/sync/mercadopago', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account_id: accountId })
+        });
+        
+        if (!response.ok) {
+          const err = await response.json();
+          alert('Erro ao iniciar sincronização: ' + (err.detail || 'Erro desconhecido'));
+          mpSyncing = false;
+          return;
+        }
+        
+        // Start polling status
+        pollMpSyncStatus();
+      } catch (err) {
+        console.error('Erro na requisição de sincronização:', err);
+        alert('Erro ao conectar com o servidor.');
+        mpSyncing = false;
+      }
+    }
+    
+    function pollMpSyncStatus() {
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch('/api/finance/sync/mercadopago/status');
+          if (response.ok) {
+            const status = await response.json();
+            if (status.status === 'success') {
+              clearInterval(interval);
+              mpSyncing = false;
+              alert(`Sincronização concluída com sucesso! ${status.imported_count} novas transações importadas.`);
+              loadFinancialData(); // Refresh dashboard!
+            } else if (status.status === 'error') {
+              clearInterval(interval);
+              mpSyncing = false;
+              alert('Erro durante a sincronização: ' + (status.error_message || 'Erro desconhecido'));
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao verificar status da sincronização:', err);
+        }
+      }, 2000);
     }
 
     // Delete a Credit Card

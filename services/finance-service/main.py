@@ -4,8 +4,9 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException, Body, Request
+from fastapi import FastAPI, HTTPException, Body, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse
+from mercadopago_sync import sync_mercado_pago_task, SYNC_STATUS
 
 app = FastAPI(title="Lucas_OS Finance Service", version="1.0.0")
 
@@ -83,6 +84,7 @@ def init_db():
             credit_card_id INTEGER REFERENCES credit_cards(id) ON DELETE SET NULL,
             is_transfer BOOLEAN DEFAULT FALSE,
             destination_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+            external_id VARCHAR(100) UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -91,6 +93,13 @@ def init_db():
     # Migrate date column from DATE to TIMESTAMP if needed
     try:
         cursor.execute("ALTER TABLE financial_records ALTER COLUMN date TYPE TIMESTAMP WITHOUT TIME ZONE;")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        
+    # Migrate table to add external_id column if needed
+    try:
+        cursor.execute("ALTER TABLE financial_records ADD COLUMN IF NOT EXISTS external_id VARCHAR(100) UNIQUE;")
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -597,3 +606,23 @@ def get_summary(month: Optional[str] = None):
         cursor.close()
         conn.close()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/finance/sync/mercadopago")
+def sync_mercado_pago(payload: Dict[str, Any] = Body(...), background_tasks: BackgroundTasks = BackgroundTasks()):
+    account_id = payload.get("account_id")
+    if not account_id:
+        raise HTTPException(status_code=400, detail="Missing account_id")
+        
+    token = os.getenv("MERCADO_PAGO_TOKEN")
+    if not token or not token.strip():
+        raise HTTPException(
+            status_code=400, 
+            detail="MERCADO_PAGO_TOKEN não configurada no arquivo .env. Por favor, adicione seu Token de Acesso de Produção e reinicie os containers."
+        )
+        
+    background_tasks.add_task(sync_mercado_pago_task, token, int(account_id))
+    return {"status": "processing", "message": "Sincronização com Mercado Pago iniciada em segundo plano."}
+
+@app.get("/api/finance/sync/mercadopago/status")
+def get_mercado_pago_sync_status():
+    return SYNC_STATUS
