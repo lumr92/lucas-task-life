@@ -75,7 +75,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS financial_records (
             id SERIAL PRIMARY KEY,
-            date DATE NOT NULL,
+            date TIMESTAMP NOT NULL,
             description VARCHAR(255) NOT NULL,
             amount DECIMAL(12, 2) NOT NULL, -- positive for income, negative for expense
             category VARCHAR(50) NOT NULL,
@@ -87,6 +87,13 @@ def init_db():
         );
     """)
     conn.commit()
+    
+    # Migrate date column from DATE to TIMESTAMP if needed
+    try:
+        cursor.execute("ALTER TABLE financial_records ALTER COLUMN date TYPE TIMESTAMP WITHOUT TIME ZONE;")
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
     
     # Seed default accounts if empty
     cursor.execute("SELECT COUNT(*) FROM accounts")
@@ -337,7 +344,7 @@ def get_transactions(month: Optional[str] = None, account_id: Optional[int] = No
         query = """
             SELECT 
                 r.id, 
-                TO_CHAR(r.date, 'YYYY-MM-DD') as date, 
+                TO_CHAR(r.date, 'YYYY-MM-DD HH24:MI') as date, 
                 r.description, 
                 CAST(r.amount AS DOUBLE PRECISION) as amount, 
                 r.category,
@@ -419,16 +426,33 @@ def add_transaction(payload: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="Missing required transaction parameters")
     
     try:
-        # Normalize date format (pad single digit month/day with leading zeros)
-        parts = date_str.split('-')
-        if len(parts) == 3:
-            normalized_date_str = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
+        # Normalize date and time format (accept YYYY-MM-DD or YYYY-MM-DD HH:MM)
+        date_str_clean = date_str.strip()
+        time_part = "00:00"
+        if " " in date_str_clean:
+            date_part, time_part = date_str_clean.split(' ', 1)
         else:
-            normalized_date_str = date_str
-        t_date = datetime.strptime(normalized_date_str, "%Y-%m-%d").date()
+            date_part = date_str_clean
+            
+        # Pad date parts to YYYY-MM-DD
+        d_parts = date_part.split('-')
+        if len(d_parts) == 3:
+            normalized_date_str = f"{d_parts[0]}-{d_parts[1].zfill(2)}-{d_parts[2].zfill(2)}"
+        else:
+            normalized_date_str = date_part
+            
+        # Pad time parts to HH:MM
+        t_parts = time_part.split(':')
+        if len(t_parts) >= 2:
+            normalized_time_str = f"{t_parts[0].zfill(2)}:{t_parts[1].zfill(2)}"
+        else:
+            normalized_time_str = "00:00"
+            
+        normalized_datetime_str = f"{normalized_date_str} {normalized_time_str}"
+        t_date = datetime.strptime(normalized_datetime_str, "%Y-%m-%d %H:%M")
     except ValueError as ve:
         print(f"[Finance Service Debug] Date parsing failed: {ve} for date_str='{date_str}'", flush=True)
-        raise HTTPException(status_code=400, detail=f"Invalid date format (must be YYYY-MM-DD): {ve}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format (must be YYYY-MM-DD or YYYY-MM-DD HH:MM): {ve}")
         
     # Validation of fields
     if not credit_card_id and not account_id:

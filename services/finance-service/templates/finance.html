@@ -1157,9 +1157,15 @@
           }
         }
 
-        // Format Date (YYYY-MM-DD to DD/MM)
-        const dateParts = tx.date.split('-');
-        const formattedDate = `${dateParts[2]}/${dateParts[1]}`;
+        // Format Date (YYYY-MM-DD HH:MM to DD/MM HH:MM)
+        const parts = tx.date.split(' ');
+        const dateString = parts[0];
+        const timeString = parts[1] || '';
+        const dateParts = dateString.split('-');
+        let formattedDate = `${dateParts[2]}/${dateParts[1]}`;
+        if (timeString && timeString !== '00:00') {
+          formattedDate += ` ${timeString}`;
+        }
 
         row.innerHTML = `
           <div class="tx-row-left">
@@ -1182,14 +1188,22 @@
     async function handleAddTransaction(event) {
       event.preventDefault();
       
-      const date = document.getElementById('tx-date').value;
+      const dateVal = document.getElementById('tx-date').value;
+      const todayString = new Date().toLocaleDateString('en-CA');
+      let date = dateVal;
+      if (dateVal === todayString) {
+        const now = new Date();
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        date = `${dateVal} ${hrs}:${mins}`;
+      }
       const description = document.getElementById('tx-description').value.trim();
       const rawAmount = parseFloat(document.getElementById('tx-amount').value);
       const type = document.getElementById('tx-type').value;
       const category = document.getElementById('tx-category').value;
       const originVal = document.getElementById('tx-origin').value;
       
-      if (!date || !description || isNaN(rawAmount)) return;
+      if (!dateVal || !description || isNaN(rawAmount)) return;
       
       // Calculate signed amount
       // Expenses are stored negative, incomes positive, transfers negative on origin
