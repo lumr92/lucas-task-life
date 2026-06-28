@@ -386,7 +386,7 @@ def get_transactions(month: Optional[str] = None, account_id: Optional[int] = No
         if month:
             filtered_rows = []
             for r in rows:
-                t_date = datetime.strptime(r["date"], "%Y-%m-%d").date()
+                t_date = datetime.strptime(r["date"].split(' ')[0], "%Y-%m-%d").date()
                 if r["credit_card_id"]:
                     # Fetch card closing day
                     cursor.execute("SELECT closing_day FROM credit_cards WHERE id = %s", (r["credit_card_id"],))
