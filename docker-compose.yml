@@ -11,22 +11,7 @@ services:
       - ./templates/index.html:/usr/share/nginx/html/index.html:ro
       - ./static:/usr/share/nginx/html/static:ro
     depends_on:
-      - vault-service
-      - todo-service
-    networks:
-      - task-life-network
-
-  vault-service:
-    build:
-      context: ./services/vault-service
-      dockerfile: Dockerfile
-    container_name: lucas-task-life-vault-service
-    ports:
-      - "9001:9001"
-    environment:
-      - TZ=America/Sao_Paulo
-    volumes:
-      - ${OBSIDIAN_VAULT_PATH}:/vault
+      - finance-service
     networks:
       - task-life-network
 
@@ -38,30 +23,10 @@ services:
     environment:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
-      - TODO_APP_URL=${TODO_APP_URL}
       - PYTHONUNBUFFERED=1
       - TZ=America/Sao_Paulo
     depends_on:
-      - vault-service
-      - todo-service
-    networks:
-      - task-life-network
-
-  todo-service:
-    build:
-      context: ./services/todo-service
-      dockerfile: Dockerfile
-    container_name: lucas-task-life-todo-service
-    ports:
-      - "9005:9005"
-    environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_DB=lucas_todo
-      - POSTGRES_USER=lucas_user
-      - POSTGRES_PASSWORD=lucas_password
-      - TZ=America/Sao_Paulo
-    depends_on:
-      - postgres
+      - finance-service
     networks:
       - task-life-network
 
@@ -104,5 +69,3 @@ networks:
 
 volumes:
   postgres_data:
-
-
